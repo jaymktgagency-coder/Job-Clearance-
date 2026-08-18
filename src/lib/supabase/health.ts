@@ -4,6 +4,12 @@
  * Plain English: this makes one tiny request to your Supabase project and
  * translates whatever comes back into an English sentence, so the /setup page
  * can tell you exactly what's wrong instead of showing a code.
+ *
+ * We ask the login service for its public settings. That endpoint is a good
+ * test because it proves two things at once: the URL points at a real project,
+ * and the publishable key is accepted. (We deliberately do NOT use the
+ * database's /rest/v1/ front door — modern Supabase requires the SECRET key
+ * for that, so a perfectly good publishable key would look broken.)
  */
 
 import { isSet } from "@/lib/env";
@@ -18,7 +24,10 @@ export async function checkSupabaseConnection(): Promise<HealthResult> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
 
-  if (!isSet("NEXT_PUBLIC_SUPABASE_URL") || !isSet("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY")) {
+  if (
+    !isSet("NEXT_PUBLIC_SUPABASE_URL") ||
+    !isSet("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY")
+  ) {
     return {
       ok: false,
       message:
@@ -34,13 +43,14 @@ export async function checkSupabaseConnection(): Promise<HealthResult> {
   }
 
   try {
-    // Ask Supabase's data API for its front door. A healthy project answers
-    // 200. A wrong key answers 401. A wrong URL fails to connect at all.
-    const response = await fetch(`${url.replace(/\/$/, "")}/rest/v1/`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}` },
-      cache: "no-store",
-      signal: AbortSignal.timeout(8000),
-    });
+    const response = await fetch(
+      `${url.replace(/\/$/, "")}/auth/v1/settings`,
+      {
+        headers: { apikey: key },
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+      },
+    );
 
     if (response.ok) {
       return { ok: true, message: "Connected to Supabase successfully." };
