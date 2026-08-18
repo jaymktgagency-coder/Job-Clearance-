@@ -121,18 +121,28 @@ async function main(): Promise<void> {
   // gets its voucher through the employer-invite path instead.
   process.stdout.write("Creating companies and locations... ");
   const companies = await insert("companies", [
+    // Verified Domain: payment method + business registration + proven domain.
     { name: "Northgate Coffee", slug: "northgate-coffee", website: "https://northgatecoffee.test",
       description: "A 12-store coffee chain in the Pacific Northwest.",
-      domain_verified_at: new Date().toISOString(), payment_method_on_file: true },
+      domain_verified_at: new Date().toISOString(), payment_method_on_file: true,
+      business_registration_verified_at: new Date().toISOString(),
+      business_registration_reference: "EIN 91-2233445" },
     { name: "Meridian Logistics", slug: "meridian-logistics", website: "https://meridianlogistics.test",
       description: "Regional freight and warehousing.",
-      domain_verified_at: new Date().toISOString(), payment_method_on_file: true },
+      domain_verified_at: new Date().toISOString(), payment_method_on_file: true,
+      business_registration_verified_at: new Date().toISOString(),
+      business_registration_reference: "EIN 91-5566778" },
+    // Half-finished: a domain but no payment method, so no badge at all.
     { name: "Verdant Health", slug: "verdant-health", website: "https://verdanthealth.test",
       description: "Community health clinics.",
       domain_verified_at: new Date().toISOString(), payment_method_on_file: false },
+    // Verified Business: runs on Gmail, no domain to prove — and still earns
+    // a real badge. This is the case the old single checkmark shut out.
     { name: "Bright Path Dental", slug: "bright-path-dental",
       description: "Two-chair family dental practice. Runs on a free email address.",
-      payment_method_on_file: true },
+      payment_method_on_file: true,
+      business_registration_verified_at: new Date().toISOString(),
+      business_registration_reference: "WA UBI 604-321-987" },
   ]);
   const co = Object.fromEntries(companies.map((c) => [c.slug as string, c.id as string]));
 
@@ -350,6 +360,51 @@ async function main(): Promise<void> {
   }
   console.log("done.");
 
+  // ---- Hires, payouts, and one that went wrong ----------------------------
+  // Enough history that the money and reputation screens have something real
+  // to show: one hire that stuck, one that left early, one still inside the
+  // 60-day hold.
+  process.stdout.write("Recording hires and payouts... ");
+
+  const appFor = async (seekerId: string): Promise<string> => {
+    const { data, error } = await db.from("applications").select("id").eq("seeker_id", seekerId).single();
+    stop("Could not find the application", error);
+    return data!.id as string;
+  };
+  const daysAgo = (n: number): string =>
+    new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+
+  // Sam started 90 days ago and is still there: the payout has come due.
+  await insert("hires", [{
+    application_id: await appFor(sam), start_date: daysAgo(90),
+    confirmed_by_employer_at: now, confirmed_by_seeker_at: now,
+  }]);
+
+  // Priya started 20 days ago and left on day 12 — inside the 30-day window,
+  // so the voucher is paid nothing and Meridian earns a credit.
+  const priyaHire = await insert("hires", [{
+    application_id: await appFor(priya), start_date: daysAgo(20),
+    confirmed_by_employer_at: now, confirmed_by_seeker_at: now,
+  }]);
+  const { error: sepErr } = await db
+    .from("hires")
+    .update({ separated_at: daysAgo(8) })
+    .eq("id", priyaHire[0].id as string);
+  stop("Could not record the early departure", sepErr);
+
+  // Ruth started five days ago: still inside the hold.
+  await insert("hires", [{
+    application_id: await appFor(ruth), start_date: daysAgo(5),
+    confirmed_by_employer_at: now, confirmed_by_seeker_at: now,
+  }]);
+
+  // Run the scheduled jobs once so the demo data looks like a live system.
+  const { error: retErr } = await db.rpc("check_hire_retention");
+  stop("Could not run the retention check", retErr);
+  const { error: relErr } = await db.rpc("release_due_payouts");
+  stop("Could not run the payout release", relErr);
+  console.log("done.");
+
   // ---- Summary ------------------------------------------------------------
   const count = async (table: string): Promise<number> => {
     const { count: n } = await db.from(table).select("*", { count: "exact", head: true });
@@ -365,6 +420,17 @@ async function main(): Promise<void> {
   console.log(`  intro requests   ${await count("intro_requests")}`);
   console.log(`  vouches          ${await count("vouches")}`);
   console.log(`  candidates       ${await count("applications")}`);
+  console.log(`  hires            ${await count("hires")}   (1 stuck, 1 left early, 1 in the 60-day hold)`);
+  console.log(`  payouts          ${await count("payouts")}`);
+  console.log(`  employer credits ${await count("employer_credits")}   (from the early departure)`);
+
+  const { data: tiers } = await db.from("companies").select("name, verification_tier").order("name");
+  console.log("\n  Company badges:");
+  for (const c of tiers ?? []) {
+    const label = c.verification_tier === "domain" ? "Verified Domain"
+      : c.verification_tier === "business" ? "Verified Business" : "no badge yet";
+    console.log(`    ${String(c.name).padEnd(20)} ${label}`);
+  }
   console.log("\nEvery demo login uses the password:  " + DEMO_PASSWORD);
   console.log("\n  Employer  erin@northgatecoffee.test      Northgate Coffee (verified)");
   console.log("  Employer  rosa.brightpath@gmail.test     Bright Path Dental (no domain, invite path)");

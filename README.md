@@ -26,6 +26,7 @@ key from scratch. For what's in the database and why, see
 | Voucher receives | 50% of that fee |
 | Payout releases | 60 days after the hire's start date — not at hire |
 | If the hire leaves within 30 days | Employer gets a 50% credit toward their next hire. No cash refund |
+| If they leave before day 60 | The voucher is paid nothing, whatever the reason |
 | Seeker pays | Nothing, ever |
 
 Fees, shares, and caps live in the `platform_settings` table, not in code. The
@@ -54,6 +55,12 @@ future change can quietly drop them.
    only reviewed their profile — and discloses what the voucher stands to earn.
 7. **Vouchers affirm their employer permits participation** before they can be
    verified, and cannot mark themselves verified.
+8. **A business without a domain is still a real business.** Two badges:
+   *Verified Business* (payment method + business registration) and
+   *Verified Domain* (that, plus a proven email domain). Both are legitimate;
+   the second simply unlocks work-email voucher verification.
+9. **No money moves from a login.** Payouts and charges have no update
+   policies at all — every movement happens server-side.
 
 ---
 
@@ -87,6 +94,10 @@ npm run dev
 src/
   app/                    Pages. A folder here = a URL.
     page.tsx              The home page (/)
+    (auth)/               Sign up and sign in
+    onboarding/           The "tell us about yourself" step, per role
+    dashboard/            Where each role lands after signing in
+    invite/[token]/       Where an employer's invitation link lands
     setup/page.tsx        Setup health check (/setup)
     layout.tsx            Wrapper around every page: fonts, tab title
   components/ui/          shadcn/ui building blocks
@@ -98,9 +109,12 @@ src/
     supabase/db-status.ts Table + demo-data check used by /setup
   proxy.ts                Runs before every request; keeps logins alive
 supabase/
-  migrations/             SQL you paste into Supabase, in order
+  migrations/             SQL applied to Supabase, in order (0001 - 0005)
+  tests/                  49 checks that prove the rules above still hold
 scripts/
   seed.mts                Fills the database with demo data
+tests/
+  *.mjs                   Browser tests for sign-up, sign-in, and invites
 docs/
   SCHEMA.md               What every table holds, in plain English
 ```
@@ -109,11 +123,13 @@ docs/
 
 - [x] **Step 1** — Project scaffold, Supabase connection, environment setup
 - [x] **Step 2a** — Core schema (15 tables) + security rules + seed data
-- [ ] Step 2b — Money and reputation: hires, payouts, employer charges,
-      voucher track record, abuse flags
-- [ ] Step 3 — Auth + onboarding for all three roles
-- [ ] Step 4 — Voucher verification: work email + 6-digit code, and the
-      employer-invite path
+- [x] **Step 2b** — Money and reputation: hires, payouts, employer charges,
+      credits, voucher track record, abuse flags, two-tier business
+      verification (20 tables, 1 view, 56 policies)
+- [x] **Step 3** — Accounts, sign-in, and onboarding for all three roles,
+      including the employer-invite path
+- [ ] Step 4 — Voucher verification by work email + 6-digit code (the
+      employer-invite path already works)
 - [ ] Step 5 — Seeker flow: profile, resume upload, browse jobs, request intro
 - [ ] Step 6 — Voucher flow: request inbox, write vouch or decline
 - [ ] Step 7 — Employer flow: post a job, view vouched candidates, update status

@@ -174,3 +174,37 @@ begin;
     raise notice 'PASS: they are still unverified afterwards';
   end $$;
 commit;
+
+-- ---- an employer can create a company and become its owner ----------------
+-- This is the exact path that "infinite recursion detected in policy for
+-- relation company_members" used to break.
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+  do $$
+  declare v_co uuid;
+  begin
+    insert into public.companies (name, slug) values ('Brand New Co', 'brand-new-co-test')
+      returning id into v_co;
+    insert into public.company_members (company_id, user_id, member_role)
+      values (v_co, '11111111-1111-1111-1111-111111111111', 'owner');
+    raise notice 'PASS: an employer can create a company and become its owner';
+  end $$;
+rollback;
+
+-- ...but not bolt themselves onto a company that already has people
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"55555555-5555-5555-5555-555555555555","role":"authenticated"}';
+  do $$
+  begin
+    begin
+      insert into public.company_members (company_id, user_id, member_role)
+      values ('aaaaaaaa-0000-0000-0000-000000000001','55555555-5555-5555-5555-555555555555','owner');
+      raise exception 'FAIL: an outsider joined a company that already has members';
+    exception when others then
+      if sqlerrm like 'FAIL:%' then raise; end if;
+      raise notice 'PASS (rejected): joining a company that already has members -> %', left(sqlerrm, 70);
+    end;
+  end $$;
+rollback;

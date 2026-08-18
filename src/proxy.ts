@@ -1,13 +1,13 @@
 /**
  * proxy.ts — runs on the server before every page loads.
  *
- * Plain English: logins expire. This file quietly refreshes the visitor's
- * login cookie on each request so people don't get randomly logged out.
+ * Plain English: two jobs. First, logins expire, so this quietly refreshes
+ * the visitor's login cookie on each request. Second, it keeps people out of
+ * pages they shouldn't see — signed-out visitors can't reach the dashboard,
+ * and signed-in people don't get shown the sign-up form again.
+ *
  * (In older Next.js tutorials this file was called `middleware.ts`; Next.js 16
  * renamed it to `proxy.ts`. Same job, new name.)
- *
- * Right now it ONLY refreshes the session. Deciding who is allowed to see
- * which page comes later, in Step 3 (auth + onboarding).
  */
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -49,8 +49,26 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  // Asking for the user is what triggers the refresh. We ignore the result.
-  await supabase.auth.getUser();
+  // Asking for the user is what triggers the refresh — and tells us whether
+  // anyone is signed in.
+  const { data } = await supabase.auth.getUser();
+  const signedIn = Boolean(data.user);
+  const path = request.nextUrl.pathname;
+
+  // Pages that only make sense once you are signed in.
+  const needsAccount = path.startsWith("/dashboard") || path.startsWith("/onboarding");
+  if (needsAccount && !signedIn) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  // No point showing the sign-up form to someone already signed in.
+  if (signedIn && (path === "/login" || path === "/signup")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
 
   return response;
 }

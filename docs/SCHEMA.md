@@ -1,9 +1,9 @@
 # The Vouch database, in plain English
 
-Fifteen tables. This explains what each one holds and why, without assuming you
-know anything about databases.
+Twenty tables and one saved query. This explains what each one holds and why,
+without assuming you know anything about databases.
 
-Built in Step 2a. Money, payouts, and reputation arrive in Step 2b.
+Steps 2a (people, companies, jobs, vouches) and 2b (money and reputation).
 
 ---
 
@@ -50,10 +50,22 @@ in the app code — it's in the table.
 
 ### Companies
 
-**`companies`** — the employer organizations. The green checkmark
-(`is_verified`) is **computed, not set**: it's true only when the company has
-proven domain ownership *and* has a payment method on file. Nobody can flip it
-by hand, including us.
+**`companies`** — the employer organizations, and the two verification badges.
+
+`verification_tier` is **computed, not set** — nobody can flip it by hand,
+including us:
+
+| Badge | What it takes | What it means |
+|---|---|---|
+| **Verified Domain** | payment method + business registration + proven email domain | Everything below, plus we've confirmed they own their email domain — which is what makes work-email voucher verification possible |
+| **Verified Business** | payment method + business registration | A real, registered business that can actually pay. No domain needed |
+| *(none)* | anything less | Hasn't finished signing up |
+
+The distinction matters: a two-chair dental practice running on Gmail can never
+own a company domain, but it is every bit as real an employer. Under the old
+single checkmark it would have looked permanently second-rate next to a chain.
+Now it earns **Verified Business**, and gets its vouchers through invitations
+instead of work-email checks.
 
 **`company_domains`** — the email domains that prove employment. Separate table
 because real companies own several. Free providers like gmail are blocked in
@@ -116,6 +128,57 @@ Nothing here auto-rejects anyone; a human moves every candidate.
 and from what to what. Feeds dispute resolution and, in Step 2b, the retention
 figures behind a voucher's public record.
 
+### Money (Step 2b)
+
+**`hires`** — the money event, and the only thing that makes anything owed.
+A hire needs **both** the employer and the seeker to confirm it. That's
+deliberate: the employer is the one who owes $500–$2,000 and has every reason
+to stay quiet, and the seeker has no way to prove it alone. If a seeker
+reports a hire and the employer says nothing for a week, it becomes a
+**dispute** for a human to sort out, rather than quietly disappearing.
+
+Confirmation freezes the fee, sets the payout date to 60 days after the start
+date, and marks the candidate as hired.
+
+**`employer_charges`** — what the employer owes for one hire, and whether it's
+been paid, credited, or waived.
+
+**`employer_credits`** — the early-departure remedy. If the person leaves
+inside the 30-day window, the employer does **not** get cash back; they get a
+credit worth half the fee toward their next hire. This table is the ledger:
+one row per credit, marked off when spent. Credits are spent oldest first, and
+a credit bigger than the next bill is split rather than wasted.
+
+**`payouts`** — what the voucher is owed, released 60 days after the start
+date rather than at hire. That delay is the entire anti-abuse mechanism: vouch
+carelessly for a stranger who doesn't last, and you lose both the money and
+your retention record. No payout can reach `released` or `paid` until the
+voucher has completed identity **and** tax verification.
+
+**`abuse_flags`** — accounts needing a human look: unusual volume, poor
+retention, repeated vouch text, signs of a ring. Nothing here punishes anyone
+automatically; a person decides. **No logged-in user can read this table at
+all** — you should not be able to discover you've been flagged by querying the
+API.
+
+**`voucher_reputation`** — **a saved query, not a table.** Computed live from
+hires, so the numbers can never drift out of sync with reality the way stored
+counters do. It reports vouches written, hires resulting, how many were still
+there at 60 days — and a retention *percentage* that stays deliberately blank
+until there are at least five measured hires. One vouch that didn't work out
+should not read as "0% retention" forever.
+
+### Jobs that run on a timer
+
+Three functions the platform calls on a schedule. They're written as database
+functions so they can be tested now and wired to a timer later:
+
+- `check_hire_retention()` — marks whether each hire was still employed at 60 days
+- `release_due_payouts()` — releases payouts whose hold has expired, and puts a
+  hold on anyone who still hasn't completed identity and tax checks
+- `open_stale_hire_disputes()` — opens a dispute when a seeker reports a hire
+  and the employer never responds
+
 ### Settings
 
 **`platform_settings`** — your configurable numbers: both tier fees, the
@@ -152,8 +215,12 @@ before this shipped.
 | A vouch must be at least 150 characters | Rejected |
 | An AI score without written reasoning | Rejected |
 | A verified voucher who never affirmed employer permission | Rejected |
-| The green checkmark, set by hand | Rejected — it's computed |
+| A verification badge, set by hand | Rejected — it's computed |
 | A voucher marking themselves verified | Rejected — only Vouch's server can |
+| Money owed before both sides confirm a hire | No charge or payout is created |
+| Releasing a payout before identity + tax checks | Rejected |
+| A voucher editing their own payout | 0 rows touched — there is no policy allowing it |
+| Cash refund for an early departure | Not possible — the remedy is a credit row |
 
 ---
 
@@ -168,8 +235,17 @@ query, so they hold no matter which screen or script is asking.
 | Voucher (verified) | Intro requests for jobs **at their own company**, and those seekers' profiles. Nothing from any other company. |
 | Voucher (unverified) | Nothing. |
 | Employer | Candidates with a vouch for **their own** jobs, those seekers' profiles, and the vouchers who wrote them. |
-| Anyone | Company names, locations, and open jobs. |
-| Nobody | Verification codes. Server-side only. |
+| Anyone | Company names, badges, locations, and open jobs. |
+| Nobody | Verification codes, and abuse flags. Server-side only. |
+
+On the money specifically:
+
+| Who | Can see |
+|---|---|
+| Voucher | Their own payouts. Not other vouchers' payouts, not employer charges. |
+| Employer | Their own company's charges and credits. Never a voucher's payout. |
+| Seeker | The hire itself. No payouts, no charges — the money is not their business. |
+| Anyone, writing | **Nothing.** There are no update policies on payouts or charges at all; every money movement happens server-side. |
 
 Tested by logging in as each role against a real database and counting what
 came back — including checking that a voucher at one company sees exactly zero
