@@ -154,10 +154,18 @@ export default async function DashboardPage() {
                 You can vouch for people applying where you work.
               </p>
             ) : (
-              <p>
-                You can&apos;t vouch until you&apos;re verified. The 6-digit email code
-                arrives in Step 4 — or your employer can invite you directly.
-              </p>
+              <>
+                <p>
+                  You can&apos;t vouch until you&apos;re verified — that&apos;s what makes a
+                  vouch mean something.
+                </p>
+                <p className="mt-3">
+                  <a href="/verify" className="font-medium underline underline-offset-4">
+                    Verify with your work email
+                  </a>{" "}
+                  — or ask your employer to invite you directly.
+                </p>
+              </>
             )}
           </CardContent>
         </Card>

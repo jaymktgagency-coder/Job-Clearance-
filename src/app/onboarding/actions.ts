@@ -152,6 +152,28 @@ export async function completeOnboarding(
     };
   }
 
+  // Don't let someone set out down a road that dead-ends: work-email
+  // verification only works if the company has proven it owns a domain.
+  const admin = await createAdminClient();
+  const { data: domains } = await admin
+    .from("company_domains")
+    .select("domain")
+    .eq("company_id", companyId);
+
+  if (!domains || domains.length === 0) {
+    return {
+      error:
+        "That employer hasn't proven a company email domain yet, so a code sent to your work address wouldn't prove anything. Ask them to invite you directly — that's how businesses without their own email domain add vouchers.",
+    };
+  }
+
+  if (!domains.some((d) => d.domain === workEmail.split("@")[1])) {
+    const owned = domains.map((d) => d.domain).join(", ");
+    return {
+      error: `That address isn't at your employer's domain (${owned}). Use your work address, or ask them to invite you directly.`,
+    };
+  }
+
   const { error: vpErr } = await supabase.from("voucher_profiles").upsert(
     {
       user_id: user.id,

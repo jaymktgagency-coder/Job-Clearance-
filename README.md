@@ -98,6 +98,7 @@ src/
     onboarding/           The "tell us about yourself" step, per role
     dashboard/            Where each role lands after signing in
     invite/[token]/       Where an employer's invitation link lands
+    verify/               The 6-digit work-email check for vouchers
     setup/page.tsx        Setup health check (/setup)
     layout.tsx            Wrapper around every page: fonts, tab title
   components/ui/          shadcn/ui building blocks
@@ -107,6 +108,8 @@ src/
     supabase/server.ts    Supabase connection for server code (+ admin version)
     supabase/health.ts    Connection test used by /setup
     supabase/db-status.ts Table + demo-data check used by /setup
+    email.ts              Sends email via Resend, or prints it while developing
+    verification-codes.ts The 6-digit code: making it, hashing it, expiring it
   proxy.ts                Runs before every request; keeps logins alive
 supabase/
   migrations/             SQL applied to Supabase, in order (0001 - 0005)
@@ -128,8 +131,8 @@ docs/
       verification (20 tables, 1 view, 56 policies)
 - [x] **Step 3** — Accounts, sign-in, and onboarding for all three roles,
       including the employer-invite path
-- [ ] Step 4 — Voucher verification by work email + 6-digit code (the
-      employer-invite path already works)
+- [x] **Step 4** — Voucher verification: work email + 6-digit code, plus the
+      employer-invite path
 - [ ] Step 5 — Seeker flow: profile, resume upload, browse jobs, request intro
 - [ ] Step 6 — Voucher flow: request inbox, write vouch or decline
 - [ ] Step 7 — Employer flow: post a job, view vouched candidates, update status

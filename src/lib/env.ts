@@ -60,7 +60,7 @@ export const ENV_VARS: EnvVar[] = [
   {
     name: "RESEND_API_KEY",
     description:
-      "Resend key, used to send emails (the voucher's 6-digit verification code).",
+      "Resend key, for sending the voucher's 6-digit code. Optional while developing — without it the code is printed to your terminal and shown on screen instead.",
     neededFor: "Step 4 - voucher verification",
     requiredNow: false,
   },
