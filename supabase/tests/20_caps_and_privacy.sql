@@ -143,3 +143,34 @@ begin;
     raise notice 'PASS: verification codes invisible to every logged-in user';
   end $$;
 commit;
+
+-- ---- a voucher must not be able to verify themselves ----------------------
+begin;
+  set local role authenticated;
+  set local request.jwt.claim.sub = '44444444-4444-4444-4444-444444444444';
+  do $$
+  begin
+    begin
+      update public.voucher_profiles set status='verified', verified_at=now(),
+             employer_permission_confirmed_at=now()
+       where user_id='44444444-4444-4444-4444-444444444444';
+      raise exception 'FAIL: a voucher verified themselves';
+    exception when others then
+      if sqlerrm like 'FAIL:%' then raise; end if;
+      raise notice 'PASS (rejected): a voucher marking themselves verified -> %', left(sqlerrm, 80);
+    end;
+  end $$;
+commit;
+
+-- and they still cannot vouch
+begin;
+  set local role authenticated;
+  set local request.jwt.claim.sub = '44444444-4444-4444-4444-444444444444';
+  do $$
+  declare s public.voucher_status;
+  begin
+    select status into s from public.voucher_profiles where user_id='44444444-4444-4444-4444-444444444444';
+    if s <> 'unverified' then raise exception 'FAIL: status is now %', s; end if;
+    raise notice 'PASS: they are still unverified afterwards';
+  end $$;
+commit;

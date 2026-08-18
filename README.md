@@ -53,7 +53,7 @@ future change can quietly drop them.
 6. **Every vouch says what it is** — whether the voucher knows the person or
    only reviewed their profile — and discloses what the voucher stands to earn.
 7. **Vouchers affirm their employer permits participation** before they can be
-   verified.
+   verified, and cannot mark themselves verified.
 
 ---
 

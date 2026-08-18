@@ -153,6 +153,7 @@ before this shipped.
 | An AI score without written reasoning | Rejected |
 | A verified voucher who never affirmed employer permission | Rejected |
 | The green checkmark, set by hand | Rejected — it's computed |
+| A voucher marking themselves verified | Rejected — only Vouch's server can |
 
 ---
 

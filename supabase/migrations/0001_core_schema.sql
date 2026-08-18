@@ -787,3 +787,57 @@ $$;
 create trigger trg_application_status_stamp
   before update on public.applications
   for each row execute function public.stamp_application_status_time();
+
+-- ---------------------------------------------------------------------------
+-- 10. VOUCHERS CANNOT VERIFY THEMSELVES
+--
+-- A voucher is allowed to edit their own profile (job title, branch), but the
+-- fields that decide whether they may vouch at all — and whether they may be
+-- paid — must only ever be changed by Vouch's own server code. Without this,
+-- anyone could sign up, set their own status to 'verified', and start vouching.
+--
+-- `current_user` is 'service_role' when the change comes from our server using
+-- the secret key, and 'postgres' when it comes from the Supabase SQL Editor.
+-- Anything else is an ordinary logged-in person.
+-- ---------------------------------------------------------------------------
+
+create or replace function public.protect_voucher_verification()
+returns trigger
+language plpgsql
+as $$
+declare
+  v_trusted boolean := current_user in ('service_role', 'postgres');
+begin
+  if v_trusted then
+    return new;
+  end if;
+
+  if tg_op = 'INSERT' then
+    -- Anyone may create their own voucher profile, but it starts unverified.
+    if new.status <> 'unverified'
+       or new.verified_at is not null
+       or new.identity_verified_at is not null then
+      raise exception 'A new voucher profile always starts unverified.'
+        using errcode = 'check_violation';
+    end if;
+    return new;
+  end if;
+
+  if new.status                is distinct from old.status
+  or new.verified_at           is distinct from old.verified_at
+  or new.verification_method   is distinct from old.verification_method
+  or new.identity_verified_at  is distinct from old.identity_verified_at
+  or new.tax_info_collected_at is distinct from old.tax_info_collected_at
+  or new.payout_account_id     is distinct from old.payout_account_id
+  or new.company_id            is distinct from old.company_id then
+    raise exception 'Verification and payout details can only be changed by Vouch, not by the voucher.'
+      using errcode = 'check_violation';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger trg_voucher_protect_verification
+  before insert or update on public.voucher_profiles
+  for each row execute function public.protect_voucher_verification();
