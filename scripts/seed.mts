@@ -211,6 +211,7 @@ async function main(): Promise<void> {
   const dee = await createPerson("dee@seeker.test", "Dee Whitfield", "seeker");
   const chris = await createPerson("chris@seeker.test", "Chris Alvarez", "seeker");
   const nina = await createPerson("nina@seeker.test", "Nina Kovac", "seeker");
+  const ruth = await createPerson("ruth@seeker.test", "Ruth Adeyemi", "seeker");
 
   await insert("seeker_profiles", [
     { user_id: jordan, headline: "Barista and shift lead, 4 years", location: "Seattle, WA",
@@ -233,6 +234,10 @@ async function main(): Promise<void> {
       years_experience: 0, skills: ["scheduling", "medical records", "front desk"],
       desired_titles: ["Medical Receptionist"],
       bio: "Just finished a health administration certificate. No professional experience and no contacts in the field." },
+    { user_id: ruth, headline: "Cafe supervisor, 6 years", location: "Seattle, WA",
+      years_experience: 6, skills: ["espresso", "opening/closing", "training", "ordering"],
+      desired_titles: ["Barista", "Shift Supervisor"],
+      bio: "Six years in independent coffee, three of them supervising. Relocated to Ballard in the spring." },
     { user_id: nina, headline: "Dental hygienist, licensed", location: "Seattle, WA",
       years_experience: 5, skills: ["hygiene", "patient education", "x-rays"],
       desired_titles: ["Dental Hygienist"],
@@ -301,6 +306,7 @@ async function main(): Promise<void> {
     { job_id: job["Dispatcher"], seeker_id: dee, message: "No warehouse background, but I have run a schedule for 20." },
     { job_id: job["Medical Receptionist"], seeker_id: chris, message: "New to the field and trying to get a first shot." },
     { job_id: job["Dental Hygienist"], seeker_id: nina, message: "Licensed, five years, new to Seattle." },
+    { job_id: job["Barista"], seeker_id: ruth, message: "Six years on bar, three supervising. I live four blocks away." },
   ]);
   const req = Object.fromEntries(answered.map((r) => [r.seeker_id as string, r.id as string]));
 
@@ -312,6 +318,8 @@ async function main(): Promise<void> {
       body: "I do not know Sam personally. I read the profile and the resume with our Kent floor in mind. Two years of steady warehouse work, forklift certified, and specifically asking for early shifts, which is the slot we struggle hardest to fill. Nothing here is unusual or overstated. Worth a conversation." },
     { intro_request_id: req[dee], voucher_id: kenji, relationship: "reviewed_profile_only",
       body: "I have not met Dee. On paper this is a career change and the warehouse experience is not there. What is there is eight years running a retail floor and a schedule for twenty people, which is most of what dispatch actually is. I would not promise a fit, but I would spend twenty minutes on a call before passing." },
+    { intro_request_id: req[ruth], voucher_id: tomas, relationship: "knows_personally",
+      body: "Ruth and I worked the same shifts at my previous cafe for about two years before I moved to Northgate. She trained most of our new starters and was the person I trusted to open on a Saturday. She knows this neighbourhood and she is already a regular at our Ballard store. I would be glad to have her back on a bar with me." },
     { intro_request_id: req[nina], voucher_id: marisol, relationship: "reviewed_profile_only",
       body: "I do not know Nina. I read the profile carefully. Licensed hygienist, five years of experience, recently moved here and openly says she has no contacts in the city. Our practice is small and we have been short a hygienist for two months. The experience lines up cleanly with what we need." },
   ]);
@@ -330,6 +338,7 @@ async function main(): Promise<void> {
     [byVouch[sam], "hired", marcus],
     [byVouch[dee], "reviewing", marcus],
     [byVouch[nina], "new", rosa],
+    [byVouch[ruth], "interviewed", erin],
   ];
   for (const [vouchId, status, actor] of progress) {
     if (status === "new") continue;
@@ -351,7 +360,7 @@ async function main(): Promise<void> {
   console.log("Seed complete.\n");
   console.log(`  companies        ${await count("companies")}   (2 verified, 2 not)`);
   console.log(`  locations        ${await count("locations")}`);
-  console.log(`  people           ${await count("users")}   (4 employers, 5 vouchers, 6 seekers)`);
+  console.log(`  people           ${await count("users")}   (4 employers, 5 vouchers, 7 seekers)`);
   console.log(`  jobs             ${await count("jobs")}`);
   console.log(`  intro requests   ${await count("intro_requests")}`);
   console.log(`  vouches          ${await count("vouches")}`);
@@ -364,6 +373,7 @@ async function main(): Promise<void> {
   console.log("  Voucher   lena@verdanthealth.test        NOT verified — cannot vouch");
   console.log("  Seeker    jordan@seeker.test             at the cap of 5 open requests");
   console.log("  Seeker    nina@seeker.test               vouched by a stranger who read her profile");
+  console.log("  Seeker    ruth@seeker.test               vouched by someone who knows her personally");
   console.log("\nAI scores are deliberately empty — those arrive in Step 8.\n");
 }
 
