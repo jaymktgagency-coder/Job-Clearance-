@@ -94,6 +94,10 @@ npm run dev
 src/
   app/                    Pages. A folder here = a URL.
     page.tsx              The home page (/)
+    (auth)/               Sign up and sign in
+    onboarding/           The "tell us about yourself" step, per role
+    dashboard/            Where each role lands after signing in
+    invite/[token]/       Where an employer's invitation link lands
     setup/page.tsx        Setup health check (/setup)
     layout.tsx            Wrapper around every page: fonts, tab title
   components/ui/          shadcn/ui building blocks
@@ -105,10 +109,12 @@ src/
     supabase/db-status.ts Table + demo-data check used by /setup
   proxy.ts                Runs before every request; keeps logins alive
 supabase/
-  migrations/             SQL applied to Supabase, in order (0001 - 0004)
-  tests/                  47 checks that prove the rules above still hold
+  migrations/             SQL applied to Supabase, in order (0001 - 0005)
+  tests/                  49 checks that prove the rules above still hold
 scripts/
   seed.mts                Fills the database with demo data
+tests/
+  *.mjs                   Browser tests for sign-up, sign-in, and invites
 docs/
   SCHEMA.md               What every table holds, in plain English
 ```
@@ -120,9 +126,10 @@ docs/
 - [x] **Step 2b** — Money and reputation: hires, payouts, employer charges,
       credits, voucher track record, abuse flags, two-tier business
       verification (20 tables, 1 view, 56 policies)
-- [ ] Step 3 — Auth + onboarding for all three roles
-- [ ] Step 4 — Voucher verification: work email + 6-digit code, and the
-      employer-invite path
+- [x] **Step 3** — Accounts, sign-in, and onboarding for all three roles,
+      including the employer-invite path
+- [ ] Step 4 — Voucher verification by work email + 6-digit code (the
+      employer-invite path already works)
 - [ ] Step 5 — Seeker flow: profile, resume upload, browse jobs, request intro
 - [ ] Step 6 — Voucher flow: request inbox, write vouch or decline
 - [ ] Step 7 — Employer flow: post a job, view vouched candidates, update status
