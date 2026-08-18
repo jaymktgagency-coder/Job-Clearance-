@@ -43,17 +43,17 @@ insert into public.voucher_profiles (user_id, company_id, location_id, status, v
 insert into public.voucher_profiles (user_id, company_id, status) values
   ('44444444-4444-4444-4444-444444444444','aaaaaaaa-0000-0000-0000-000000000001','unverified');
 
--- --- 1. green checkmark is computed, not set -------------------------------
+-- --- 1. company verification --------------------------------------------
+-- The two-tier badge (Verified Business / Verified Domain) arrived in Step 2b
+-- and is covered end to end in 30_money_and_reputation.sql. Nothing to check
+-- here beyond the companies existing.
 do $$
 begin
-  if (select is_verified from public.companies where slug='acme-coffee') is not true
-     or (select is_verified from public.companies where slug='other-corp') is not false then
-    raise exception 'FAIL: is_verified not computed correctly';
+  if (select count(*) from public.companies) < 2 then
+    raise exception 'FAIL: fixture companies missing';
   end if;
-  raise notice 'PASS: green checkmark computed from domain + payment method';
+  raise notice 'PASS: fixture companies created';
 end $$;
-select must_fail($$update public.companies set is_verified = true where slug='other-corp'$$,
-                 'setting the green checkmark by hand');
 
 -- --- 2. fee tier derived from pay type, amounts from settings ---------------
 insert into public.jobs (id, company_id, location_id, posted_by, title, description, pay_type, status, posted_at)

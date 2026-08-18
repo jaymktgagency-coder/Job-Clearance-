@@ -26,6 +26,7 @@ key from scratch. For what's in the database and why, see
 | Voucher receives | 50% of that fee |
 | Payout releases | 60 days after the hire's start date — not at hire |
 | If the hire leaves within 30 days | Employer gets a 50% credit toward their next hire. No cash refund |
+| If they leave before day 60 | The voucher is paid nothing, whatever the reason |
 | Seeker pays | Nothing, ever |
 
 Fees, shares, and caps live in the `platform_settings` table, not in code. The
@@ -54,6 +55,12 @@ future change can quietly drop them.
    only reviewed their profile — and discloses what the voucher stands to earn.
 7. **Vouchers affirm their employer permits participation** before they can be
    verified, and cannot mark themselves verified.
+8. **A business without a domain is still a real business.** Two badges:
+   *Verified Business* (payment method + business registration) and
+   *Verified Domain* (that, plus a proven email domain). Both are legitimate;
+   the second simply unlocks work-email voucher verification.
+9. **No money moves from a login.** Payouts and charges have no update
+   policies at all — every movement happens server-side.
 
 ---
 
@@ -98,7 +105,8 @@ src/
     supabase/db-status.ts Table + demo-data check used by /setup
   proxy.ts                Runs before every request; keeps logins alive
 supabase/
-  migrations/             SQL you paste into Supabase, in order
+  migrations/             SQL applied to Supabase, in order (0001 - 0004)
+  tests/                  47 checks that prove the rules above still hold
 scripts/
   seed.mts                Fills the database with demo data
 docs/
@@ -109,8 +117,9 @@ docs/
 
 - [x] **Step 1** — Project scaffold, Supabase connection, environment setup
 - [x] **Step 2a** — Core schema (15 tables) + security rules + seed data
-- [ ] Step 2b — Money and reputation: hires, payouts, employer charges,
-      voucher track record, abuse flags
+- [x] **Step 2b** — Money and reputation: hires, payouts, employer charges,
+      credits, voucher track record, abuse flags, two-tier business
+      verification (20 tables, 1 view, 56 policies)
 - [ ] Step 3 — Auth + onboarding for all three roles
 - [ ] Step 4 — Voucher verification: work email + 6-digit code, and the
       employer-invite path
