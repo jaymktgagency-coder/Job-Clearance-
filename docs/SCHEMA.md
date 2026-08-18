@@ -179,6 +179,20 @@ functions so they can be tested now and wired to a timer later:
 - `open_stale_hire_disputes()` — opens a dispute when a seeker reports a hire
   and the employer never responds
 
+### Resume files
+
+Resumes are files, not rows, so they live in Supabase Storage rather than a
+table — in a **private** bucket called `resumes`, capped at 5 MB and limited to
+PDF, Word, and plain text. Private means there is no shareable URL: every read
+goes through the same permission check as everything else.
+
+Each file sits at `<user-id>/<filename>`, and the rules mirror the seeker's
+profile exactly: the seeker can upload, replace and delete their own; a
+**verified** voucher can read the resume of someone who asked for a vouch at
+their own company; an employer can read a vouched candidate's resume for their
+own job. Nobody else can read anything, and nobody can write into another
+person's folder.
+
 ### Settings
 
 **`platform_settings`** — your configurable numbers: both tier fees, the

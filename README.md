@@ -112,8 +112,8 @@ src/
     verification-codes.ts The 6-digit code: making it, hashing it, expiring it
   proxy.ts                Runs before every request; keeps logins alive
 supabase/
-  migrations/             SQL applied to Supabase, in order (0001 - 0005)
-  tests/                  49 checks that prove the rules above still hold
+  migrations/             SQL applied to Supabase, in order (0001 - 0006)
+  tests/                  57 checks that prove the rules above still hold
 scripts/
   seed.mts                Fills the database with demo data
 tests/
@@ -134,6 +134,7 @@ docs/
 - [x] **Step 4** — Voucher verification: work email + 6-digit code, plus the
       employer-invite path
 - [ ] Step 5 — Seeker flow: profile, resume upload, browse jobs, request intro
+      (the private resume bucket and its access rules are already in place)
 - [ ] Step 6 — Voucher flow: request inbox, write vouch or decline
 - [ ] Step 7 — Employer flow: post a job, view vouched candidates, update status
 - [ ] Step 8 — AI layer: resume parsing + fit scoring with written reasoning

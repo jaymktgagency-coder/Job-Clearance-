@@ -16,3 +16,24 @@ create or replace function auth.uid() returns uuid language sql stable as $$
   )::uuid;
 $$;
 grant usage on schema auth to anon, authenticated, service_role;
+
+-- Enough of Supabase Storage to test the resume rules locally.
+create schema if not exists storage;
+create table if not exists storage.buckets (
+  id text primary key,
+  name text not null,
+  public boolean not null default false,
+  file_size_limit bigint,
+  allowed_mime_types text[]
+);
+create table if not exists storage.objects (
+  id uuid primary key default gen_random_uuid(),
+  bucket_id text not null references storage.buckets (id),
+  name text not null,
+  owner uuid,
+  created_at timestamptz not null default now()
+);
+alter table storage.objects enable row level security;
+grant usage on schema storage to anon, authenticated, service_role;
+grant select, insert, update, delete on storage.objects to authenticated, service_role;
+grant select, insert, update, delete on storage.buckets to service_role;
