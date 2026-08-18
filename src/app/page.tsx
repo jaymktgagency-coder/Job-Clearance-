@@ -19,16 +19,16 @@ import {
 // The three sides of the marketplace, described the way a visitor would need it.
 const AUDIENCES = [
   {
-    title: "Job seekers",
-    body: "Get a warm introduction from someone who actually works there — instead of applying into a black hole. Always free.",
+    title: "Seekers",
+    body: "Getting hired increasingly means knowing someone inside. Vouch gets you vouched for anyway — even with no network. Free, forever.",
   },
   {
-    title: "Insiders",
-    body: "Verified employees review intro requests for roles at their company and write a short vouch for people they'd genuinely recommend.",
+    title: "Vouchers",
+    body: "Verified employees review requests for roles where they already work, and write an honest vouch. They earn a share of the fee, and build a public track record.",
   },
   {
     title: "Employers",
-    body: "See a short list of vouched-for candidates instead of 300 cold resumes, with an advisory AI fit score and the reasoning behind it.",
+    body: "A short list of vouched-for candidates instead of 300 cold resumes. You pay only when you actually hire.",
   },
 ];
 

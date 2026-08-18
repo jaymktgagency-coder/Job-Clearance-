@@ -47,8 +47,8 @@ export const ENV_VARS: EnvVar[] = [
     name: "SUPABASE_SECRET_KEY",
     description:
       "Supabase's admin key. NEVER share this or put it in the browser. (On older projects it's labelled 'service_role'.)",
-    neededFor: "Step 2 - seeding fake data, admin jobs",
-    requiredNow: false,
+    neededFor: "Step 2a - seed data & server-side jobs",
+    requiredNow: true,
   },
   {
     name: "ANTHROPIC_API_KEY",
@@ -60,15 +60,15 @@ export const ENV_VARS: EnvVar[] = [
   {
     name: "RESEND_API_KEY",
     description:
-      "Resend key, used to send emails (the insider's 6-digit verification code).",
-    neededFor: "Step 4 - insider email verification",
+      "Resend key, used to send emails (the voucher's 6-digit verification code).",
+    neededFor: "Step 4 - voucher verification",
     requiredNow: false,
   },
   {
     name: "EMAIL_FROM",
     description:
       "The 'from' address on emails we send, e.g. Vouch <hello@yourdomain.com>.",
-    neededFor: "Step 4 - insider email verification",
+    neededFor: "Step 4 - voucher verification",
     requiredNow: false,
   },
   {

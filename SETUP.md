@@ -69,7 +69,7 @@ step that needs them.
 | # | Account | What it does for Vouch | Needed at | Cost |
 |---|---------|------------------------|-----------|------|
 | 1 | **Supabase** | Database, user logins, resume file storage | **Step 1 (now)** | Free tier |
-| 2 | **Resend** | Sends the insider's 6-digit verification email | Step 4 | Free tier (100 emails/day) |
+| 2 | **Resend** | Sends the voucher's 6-digit verification email | Step 4 | Free tier (100 emails/day) |
 | 3 | **Anthropic** | Reads resumes, writes fit scores | Step 8 | Pay-as-you-go, a few cents |
 | 4 | **Vercel** | Puts the site on the real internet | When you're ready to launch | Free tier |
 | 5 | **GitHub** | Stores the code (you already have this) | Already done | Free |
@@ -202,8 +202,80 @@ Three habits worth forming now:
 
 ---
 
+## Part 6 — Create the database tables (Step 2a)
+
+Your Supabase project is connected but empty. This creates the tables.
+
+### 6.1 Paste the two files
+
+1. In the Supabase dashboard, click **SQL Editor** in the left sidebar.
+2. Click **New query**.
+3. Open `supabase/migrations/0001_core_schema.sql` from this project in a text
+   editor. Select all of it (`Cmd+A` / `Ctrl+A`), copy, and paste it into the
+   SQL Editor box.
+4. Click **Run** (or press `Cmd+Enter` / `Ctrl+Enter`). It should say
+   **Success. No rows returned** — that's what success looks like for this kind
+   of query.
+5. Click **New query** again, and repeat with
+   `supabase/migrations/0002_row_level_security.sql`.
+
+Order matters: 0001 builds the tables, 0002 locks them down. Running 0002
+first will fail.
+
+> **If you see "type already exists" or "relation already exists":** you've run
+> the file twice. That's harmless — the tables are already there. If you'd
+> rather start clean, run `drop schema public cascade; create schema public;`
+> first, then paste 0001 again. That erases everything in the database, so only
+> do it while the data is still fake.
+
+### 6.2 Fill it with demo data
+
+Back in your terminal, in the project folder:
+
+```bash
+npm run seed
+```
+
+This creates four companies, seven locations, fifteen people, eight jobs, and a
+handful of intro requests and vouches. It prints a summary and a list of demo
+logins when it finishes.
+
+You can run it as many times as you like — each run wipes the previous demo
+data first and starts over. It only ever deletes accounts on `.test` addresses
+and the four demo companies, so it can't touch real sign-ups.
+
+### 6.3 Check it worked
+
+```bash
+npm run dev
+```
+
+Open <http://localhost:3000/setup>. The **Database tables and demo data** line
+should now be green and read something like *"Ready: 4 companies, 8 jobs,
+4 vouches."*
+
+That's Step 2a done. There are no screens to click through yet — those arrive
+in Step 3 (sign-up) onward. To look at the data in the meantime, use the
+Supabase dashboard's **Table Editor**.
+
+### Demo logins
+
+Every demo account uses the password **`vouch-demo-1234`**. A few worth knowing:
+
+| Login | What they show you |
+|---|---|
+| `erin@northgatecoffee.test` | Employer at a fully verified company (green checkmark) |
+| `rosa.brightpath@gmail.test` | Employer running on a free email address — no checkmark, uses the invite path |
+| `tomas@northgatecoffee.test` | Verified voucher, Ballard store |
+| `marisol.private@gmail.test` | Voucher verified by employer invitation, not by work email |
+| `lena@verdanthealth.test` | Voucher who never finished verifying — cannot vouch for anyone |
+| `jordan@seeker.test` | Seeker sitting at the cap of 5 open requests |
+| `nina@seeker.test` | Seeker vouched for by a stranger who read her profile |
+
+---
+
 ## What's next
 
-Step 2: the database schema — the tables for users, companies, jobs, intro
-requests, vouches, and applications, plus a seed script full of fake data so you
-can click around a realistic-looking site.
+Step 2b: the money and reputation tables — hires, payouts, employer charges,
+the voucher's public track record, and the abuse flags. Those are meaningless
+until there are hires to attach them to, which is why they come second.

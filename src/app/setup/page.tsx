@@ -11,6 +11,7 @@
 
 import { checkEnv } from "@/lib/env";
 import { checkSupabaseConnection } from "@/lib/supabase/health";
+import { checkDatabase } from "@/lib/supabase/db-status";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -26,6 +27,10 @@ export const dynamic = "force-dynamic";
 export default async function SetupPage() {
   const { results, ready } = checkEnv();
   const connection = await checkSupabaseConnection();
+  // Only worth asking about tables once we know the connection works.
+  const database = connection.ok
+    ? await checkDatabase()
+    : { schemaApplied: false, companies: 0, jobs: 0, vouches: 0, message: "Not tested yet." };
 
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-12">
@@ -40,19 +45,19 @@ export default async function SetupPage() {
       <Card className="mt-8">
         <CardHeader>
           <CardTitle className="flex items-center gap-3">
-            Step 1 status
-            {ready && connection.ok ? (
+            Where you are
+            {ready && connection.ok && database.companies > 0 ? (
               <Badge>Ready</Badge>
             ) : (
               <Badge variant="destructive">Not finished</Badge>
             )}
           </CardTitle>
           <CardDescription>
-            Step 1 is done when every key marked <em>Required now</em> is filled
-            in and the connection test below passes.
+            Everything below needs a ✅ before the app can show you anything
+            real.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <div className="flex items-start gap-3 rounded-md border p-4">
             <span aria-hidden className="text-lg leading-none">
               {connection.ok ? "✅" : "❌"}
@@ -60,6 +65,16 @@ export default async function SetupPage() {
             <div>
               <p className="font-medium">Supabase connection</p>
               <p className="text-sm text-muted-foreground">{connection.message}</p>
+            </div>
+          </div>
+          {/* Step 2a: are the tables there, and is there anything in them? */}
+          <div className="flex items-start gap-3 rounded-md border p-4">
+            <span aria-hidden className="text-lg leading-none">
+              {database.companies > 0 ? "✅" : database.schemaApplied ? "⚠️" : "❌"}
+            </span>
+            <div>
+              <p className="font-medium">Database tables and demo data</p>
+              <p className="text-sm text-muted-foreground">{database.message}</p>
             </div>
           </div>
         </CardContent>
