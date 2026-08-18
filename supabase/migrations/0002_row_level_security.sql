@@ -257,9 +257,9 @@ create policy voucher_profiles_read_as_seeker on public.voucher_profiles
     )
   );
 
--- Vouchers maintain their own profile. Note they can write `status` here in
--- theory; Step 4 moves verification behind a server-only routine so a voucher
--- cannot simply mark themselves verified.
+-- Vouchers maintain their own profile (job title, branch). They cannot touch
+-- the verification or payout fields: a trigger in 0001 restricts those to
+-- Vouch's own server code, so nobody can mark themselves verified.
 create policy voucher_profiles_write_self on public.voucher_profiles
   for all using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 
