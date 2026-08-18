@@ -47,7 +47,13 @@ export default function HomePage() {
 
       <div className="mt-8 flex flex-wrap gap-3">
         {/* `render` tells the button to be a real link (shadcn/Base UI pattern). */}
-        <Button size="lg" render={<Link href="/setup" />}>
+        <Button size="lg" render={<Link href="/signup" />}>
+          Get started
+        </Button>
+        <Button size="lg" variant="outline" render={<Link href="/login" />}>
+          Sign in
+        </Button>
+        <Button size="lg" variant="ghost" render={<Link href="/setup" />}>
           Check my setup
         </Button>
       </div>
@@ -66,8 +72,8 @@ export default function HomePage() {
       </div>
 
       <p className="mt-14 text-sm text-muted-foreground">
-        This is Step 1 of the build: project scaffold and Supabase connection.
-        Sign-up, job listings, and vouches are not wired up yet.
+        Accounts and sign-in work now. Browsing jobs, requesting intros, the
+        voucher inbox and the employer&apos;s candidate list arrive in Steps 5 to 7.
       </p>
     </main>
   );
