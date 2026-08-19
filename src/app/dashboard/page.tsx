@@ -58,8 +58,8 @@ export default async function DashboardPage() {
       {profile.role === "employer" ? <EmployerView /> : null}
 
       <p className="mt-10 text-sm text-muted-foreground">
-        This is Step 3 — accounts and sign-in. Browsing jobs, requesting intros,
-        the voucher inbox and the employer&apos;s candidate list arrive in Steps 5 to 7.
+        Everything from signing up to hiring works now. AI resume reading and fit
+        scoring are the last piece still to come.
       </p>
     </main>
   );
@@ -271,9 +271,12 @@ export default async function DashboardPage() {
               <CardTitle className="text-base">Your roles</CardTitle>
               <CardDescription>{jobs ?? 0} posted</CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
               <p>{candidates ?? 0} vouched candidates.</p>
-              <p className="mt-2">You only ever see candidates someone vouched for.</p>
+              <p>You only ever see candidates someone vouched for.</p>
+              <Button size="sm" render={<Link href="/employer/jobs" />}>
+                Post a role &amp; see candidates
+              </Button>
             </CardContent>
           </Card>
 

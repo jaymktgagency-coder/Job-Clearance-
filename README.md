@@ -103,6 +103,7 @@ src/
     jobs/                 Browsing open roles, and asking for an intro
     requests/             The seeker's own intro requests
     inbox/                The voucher's requests, and writing a vouch
+    employer/jobs/        Posting roles and working the candidate list
     setup/page.tsx        Setup health check (/setup)
     layout.tsx            Wrapper around every page: fonts, tab title
   components/
@@ -118,8 +119,8 @@ src/
     verification-codes.ts The 6-digit code: making it, hashing it, expiring it
   proxy.ts                Runs before every request; keeps logins alive
 supabase/
-  migrations/             SQL applied to Supabase, in order (0001 - 0006)
-  tests/                  57 checks that prove the rules above still hold
+  migrations/             SQL applied to Supabase, in order (0001 - 0007)
+  tests/                  58 checks that prove the rules above still hold
 scripts/
   seed.mts                Fills the database with demo data
 tests/
@@ -143,5 +144,6 @@ docs/
       requesting an intro, and deleting your account and files
 - [x] **Step 6** — Voucher flow: request inbox, read the profile and resume,
       write a vouch or decline
-- [ ] Step 7 — Employer flow: post a job, view vouched candidates, update status
+- [x] **Step 7** — Employer flow: post a role, work the vouched candidate
+      list, record a hire (which both sides must confirm)
 - [ ] Step 8 — AI layer: resume parsing + fit scoring with written reasoning
