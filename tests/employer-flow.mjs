@@ -73,19 +73,51 @@ await page.waitForURL("**/employer/jobs/**", { timeout: 15000 }).catch(() => {})
 }
 
 // --- 2. a tampered fee is ignored -----------------------------------------
+// Attack as an ORDINARY LOGGED-IN EMPLOYER, not with the secret key. The
+// secret key is service_role, which the platform trusts on purpose — testing
+// with it proves nothing about what an employer can do.
 console.log("\n--- the fee can't be faked ---");
 {
-  const { data: co } = await db.from("companies").select("id").eq("slug", "northgate-coffee").single();
-  const { error } = await db.from("jobs").insert({
-    company_id: co.id, title: "Cheap Salaried Role", description: "Trying to pay tier 1 for a salaried role.",
-    pay_type: "salaried", status: "draft", fee_tier: "tier_1", fee_amount_cents: 1,
+  const attacker = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+  const { error: signInErr } = await attacker.auth.signInWithPassword({
+    email: "erin@northgatecoffee.test", password: PASSWORD,
   });
-  // The trigger overwrites what was sent; check what actually landed.
-  const { data: sneaky } = await db.from("jobs").select("id, fee_tier, fee_amount_cents").eq("title", "Cheap Salaried Role").maybeSingle();
-  if (sneaky) cleanup.push({ job: sneaky.id });
-  sneaky?.fee_amount_cents === 200000 && sneaky?.fee_tier === "tier_2"
-    ? P("a hand-set fee is overwritten — the salaried role still costs $2,000")
-    : F(`the fee stuck at ${sneaky ? "$" + sneaky.fee_amount_cents / 100 : "row rejected"} (needs migration 0007 on this database)`);
+  if (signInErr) F("could not sign in as the employer: " + signInErr.message);
+
+  const { data: co } = await db.from("companies").select("id").eq("slug", "northgate-coffee").single();
+
+  const { data: cheap, error: cheapErr } = await attacker.from("jobs").insert({
+    company_id: co.id, title: `Tamper A ${Date.now()}`,
+    description: "An employer trying to name their own price on a salaried role.",
+    pay_type: "salaried", status: "draft",
+    fee_tier: "tier_1", fee_amount_cents: 1, tier_overridden: true,
+  }).select("id, fee_tier, fee_amount_cents, tier_overridden").single();
+
+  if (cheapErr) {
+    P("posting with a hand-set fee was rejected outright");
+  } else {
+    cleanup.push({ job: cheap.id });
+    cheap.fee_amount_cents === 200000 && cheap.fee_tier === "tier_2"
+      ? P("a hand-set fee is overwritten — the salaried role still costs $2,000")
+      : F(`an employer set their own fee: ${cheap.fee_tier} / $${cheap.fee_amount_cents / 100}`);
+    cheap.tier_overridden === false
+      ? P("and the override flag they sent was cleared") : F("tier_overridden stuck as true");
+  }
+
+  const { data: greedy, error: greedyErr } = await attacker.from("jobs").insert({
+    company_id: co.id, title: `Tamper B ${Date.now()}`,
+    description: "An employer trying to hand the voucher the entire fee.",
+    pay_type: "hourly", status: "draft", voucher_share_bps: 10000,
+  }).select("id, voucher_share_bps").single();
+
+  if (greedyErr) {
+    P("posting with a hand-set voucher share was rejected outright");
+  } else {
+    cleanup.push({ job: greedy.id });
+    greedy.voucher_share_bps === 5000
+      ? P("a hand-set voucher share is overwritten — it stays at 50%")
+      : F("the voucher share was set to " + greedy.voucher_share_bps);
+  }
 }
 
 // --- 3. the candidate list -------------------------------------------------
