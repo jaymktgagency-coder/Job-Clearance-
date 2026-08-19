@@ -192,8 +192,13 @@ export default async function DashboardPage() {
               <CardTitle className="text-base">Your inbox</CardTitle>
               <CardDescription>{waiting ?? 0} people waiting on a vouch</CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
               <p>You can have 5 open vouches at once.</p>
+              {verified ? (
+                <Button size="sm" render={<Link href="/inbox" />}>
+                  Open my inbox
+                </Button>
+              ) : null}
             </CardContent>
           </Card>
           <Card>

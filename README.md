@@ -102,6 +102,7 @@ src/
     profile/              The seeker's profile, resume, and account deletion
     jobs/                 Browsing open roles, and asking for an intro
     requests/             The seeker's own intro requests
+    inbox/                The voucher's requests, and writing a vouch
     setup/page.tsx        Setup health check (/setup)
     layout.tsx            Wrapper around every page: fonts, tab title
   components/
@@ -140,6 +141,7 @@ docs/
       employer-invite path
 - [x] **Step 5** — Seeker flow: profile, resume upload, browsing roles,
       requesting an intro, and deleting your account and files
-- [ ] Step 6 — Voucher flow: request inbox, write vouch or decline
+- [x] **Step 6** — Voucher flow: request inbox, read the profile and resume,
+      write a vouch or decline
 - [ ] Step 7 — Employer flow: post a job, view vouched candidates, update status
 - [ ] Step 8 — AI layer: resume parsing + fit scoring with written reasoning
