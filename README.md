@@ -99,9 +99,14 @@ src/
     dashboard/            Where each role lands after signing in
     invite/[token]/       Where an employer's invitation link lands
     verify/               The 6-digit work-email check for vouchers
+    profile/              The seeker's profile, resume, and account deletion
+    jobs/                 Browsing open roles, and asking for an intro
+    requests/             The seeker's own intro requests
     setup/page.tsx        Setup health check (/setup)
     layout.tsx            Wrapper around every page: fonts, tab title
-  components/ui/          shadcn/ui building blocks
+  components/
+    ai-notice.tsx         The AI disclosure seekers must see
+    ui/                   shadcn/ui building blocks
   lib/
     env.ts                Every environment variable, in one list
     supabase/client.ts    Supabase connection for browser code
@@ -133,8 +138,8 @@ docs/
       including the employer-invite path
 - [x] **Step 4** — Voucher verification: work email + 6-digit code, plus the
       employer-invite path
-- [ ] Step 5 — Seeker flow: profile, resume upload, browse jobs, request intro
-      (the private resume bucket and its access rules are already in place)
+- [x] **Step 5** — Seeker flow: profile, resume upload, browsing roles,
+      requesting an intro, and deleting your account and files
 - [ ] Step 6 — Voucher flow: request inbox, write vouch or decline
 - [ ] Step 7 — Employer flow: post a job, view vouched candidates, update status
 - [ ] Step 8 — AI layer: resume parsing + fit scoring with written reasoning

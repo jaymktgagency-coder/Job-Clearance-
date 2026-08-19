@@ -6,11 +6,13 @@
  * account, the role, and the data behind them are all real.
  */
 
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { currentUser, currentProfile, ROLE_LABEL } from "@/lib/auth";
 import { signOut } from "../(auth)/actions";
 import { InviteForm } from "./InviteForm";
+import { AiNotice } from "@/components/ai-notice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -79,7 +81,19 @@ export default async function DashboardPage() {
       .limit(1);
 
     return (
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+      <div className="mt-8 space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" render={<Link href="/jobs" />}>
+            Browse open roles
+          </Button>
+          <Button size="sm" variant="outline" render={<Link href="/requests" />}>
+            My intro requests
+          </Button>
+          <Button size="sm" variant="outline" render={<Link href="/profile" />}>
+            Edit my profile
+          </Button>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Your profile</CardTitle>
@@ -104,6 +118,8 @@ export default async function DashboardPage() {
             <p className="mt-2">Vouch is free for job seekers. Always.</p>
           </CardContent>
         </Card>
+        </div>
+        <AiNotice />
       </div>
     );
   }
@@ -160,9 +176,9 @@ export default async function DashboardPage() {
                   vouch mean something.
                 </p>
                 <p className="mt-3">
-                  <a href="/verify" className="font-medium underline underline-offset-4">
+                  <Link href="/verify" className="font-medium underline underline-offset-4">
                     Verify with your work email
-                  </a>{" "}
+                  </Link>{" "}
                   — or ask your employer to invite you directly.
                 </p>
               </>
