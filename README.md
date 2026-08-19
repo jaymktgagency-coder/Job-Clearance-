@@ -98,19 +98,28 @@ src/
     onboarding/           The "tell us about yourself" step, per role
     dashboard/            Where each role lands after signing in
     invite/[token]/       Where an employer's invitation link lands
+    verify/               The 6-digit work-email check for vouchers
+    profile/              The seeker's profile, resume, and account deletion
+    jobs/                 Browsing open roles, and asking for an intro
+    requests/             The seeker's own intro requests
+    inbox/                The voucher's requests, and writing a vouch
     setup/page.tsx        Setup health check (/setup)
     layout.tsx            Wrapper around every page: fonts, tab title
-  components/ui/          shadcn/ui building blocks
+  components/
+    ai-notice.tsx         The AI disclosure seekers must see
+    ui/                   shadcn/ui building blocks
   lib/
     env.ts                Every environment variable, in one list
     supabase/client.ts    Supabase connection for browser code
     supabase/server.ts    Supabase connection for server code (+ admin version)
     supabase/health.ts    Connection test used by /setup
     supabase/db-status.ts Table + demo-data check used by /setup
+    email.ts              Sends email via Resend, or prints it while developing
+    verification-codes.ts The 6-digit code: making it, hashing it, expiring it
   proxy.ts                Runs before every request; keeps logins alive
 supabase/
-  migrations/             SQL applied to Supabase, in order (0001 - 0005)
-  tests/                  49 checks that prove the rules above still hold
+  migrations/             SQL applied to Supabase, in order (0001 - 0006)
+  tests/                  57 checks that prove the rules above still hold
 scripts/
   seed.mts                Fills the database with demo data
 tests/
@@ -128,9 +137,11 @@ docs/
       verification (20 tables, 1 view, 56 policies)
 - [x] **Step 3** — Accounts, sign-in, and onboarding for all three roles,
       including the employer-invite path
-- [ ] Step 4 — Voucher verification by work email + 6-digit code (the
-      employer-invite path already works)
-- [ ] Step 5 — Seeker flow: profile, resume upload, browse jobs, request intro
-- [ ] Step 6 — Voucher flow: request inbox, write vouch or decline
+- [x] **Step 4** — Voucher verification: work email + 6-digit code, plus the
+      employer-invite path
+- [x] **Step 5** — Seeker flow: profile, resume upload, browsing roles,
+      requesting an intro, and deleting your account and files
+- [x] **Step 6** — Voucher flow: request inbox, read the profile and resume,
+      write a vouch or decline
 - [ ] Step 7 — Employer flow: post a job, view vouched candidates, update status
 - [ ] Step 8 — AI layer: resume parsing + fit scoring with written reasoning

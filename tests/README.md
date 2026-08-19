@@ -9,6 +9,9 @@ can be checked without doing it by hand every time.
 | `auth-flows.mjs` | Signed-out visitors are redirected; all three roles sign in and see the right dashboard; verified, invited, and unverified vouchers each see the right status |
 | `invite-flow.mjs` | The whole employer-invite path: creating a link, what the invited person sees, finishing onboarding as a *verified* voucher, the invitation being marked used, and the link refusing to work twice |
 | `onboarding-paths.mjs` | Seeker, employer, and self-serve voucher onboarding, including a personal email address being refused with a pointer to the invite path |
+| `seeker-flow.mjs` | The seeker's whole journey: profile editing, a real resume upload into the private bucket, checking the file can't be downloaded by a stranger, browsing roles, asking for an intro, hitting the cap of five, withdrawing, and deleting the account along with the file |
+| `voucher-inbox.mjs` | The loop closing: a seeker asks, a voucher reads their profile and resume, a one-line vouch is refused, a real vouch is written, and the employer gains a candidate. Also checks a seeker who only asked at another company is invisible, and an unverified voucher can't reach the inbox |
+| `verification-flow.mjs` | The 6-digit work-email code: refusing a domain the company hasn't proven, issuing a code, storing only its fingerprint, counting down wrong guesses, and what verification unlocks |
 
 ## Running them
 
@@ -19,6 +22,9 @@ accounts exist, and `.env.local` filled in.
 node tests/auth-flows.mjs
 node --env-file=.env.local tests/invite-flow.mjs
 node --env-file=.env.local tests/onboarding-paths.mjs
+node --env-file=.env.local tests/verification-flow.mjs
+node --env-file=.env.local tests/seeker-flow.mjs
+node --env-file=.env.local tests/voucher-inbox.mjs
 ```
 
 The last two need the database keys because they check what actually landed in

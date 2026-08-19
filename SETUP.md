@@ -69,7 +69,7 @@ step that needs them.
 | # | Account | What it does for Vouch | Needed at | Cost |
 |---|---------|------------------------|-----------|------|
 | 1 | **Supabase** | Database, user logins, resume file storage | **Step 1 (now)** | Free tier |
-| 2 | **Resend** | Sends the voucher's 6-digit verification email | Step 4 | Free tier (100 emails/day) |
+| 2 | **Resend** | Sends the voucher's 6-digit verification email | Step 4 — *optional while developing* | Free tier (100 emails/day) |
 | 3 | **Anthropic** | Reads resumes, writes fit scores | Step 8 | Pay-as-you-go, a few cents |
 | 4 | **Vercel** | Puts the site on the real internet | When you're ready to launch | Free tier |
 | 5 | **GitHub** | Stores the code (you already have this) | Already done | Free |
@@ -271,6 +271,18 @@ Every demo account uses the password **`vouch-demo-1234`**. A few worth knowing:
 | `lena@verdanthealth.test` | Voucher who never finished verifying — cannot vouch for anyone |
 | `jordan@seeker.test` | Seeker sitting at the cap of 5 open requests |
 | `nina@seeker.test` | Seeker vouched for by a stranger who read her profile |
+
+---
+
+## Verifying vouchers without an email account
+
+Until you add a Resend key, Vouch doesn't try to send email. The 6-digit
+verification code is printed to your terminal **and shown on screen**, so you
+can test the whole flow today. The moment `RESEND_API_KEY` and `EMAIL_FROM`
+appear in `.env.local`, it switches to real email on its own — no code change.
+
+Codes expire after 10 minutes, burn after 5 wrong guesses, and only a one-way
+fingerprint is ever stored.
 
 ---
 

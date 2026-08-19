@@ -60,7 +60,7 @@ export const ENV_VARS: EnvVar[] = [
   {
     name: "RESEND_API_KEY",
     description:
-      "Resend key, used to send emails (the voucher's 6-digit verification code).",
+      "Resend key, for sending the voucher's 6-digit code. Optional while developing — without it the code is printed to your terminal and shown on screen instead.",
     neededFor: "Step 4 - voucher verification",
     requiredNow: false,
   },
@@ -69,6 +69,13 @@ export const ENV_VARS: EnvVar[] = [
     description:
       "The 'from' address on emails we send, e.g. Vouch <hello@yourdomain.com>.",
     neededFor: "Step 4 - voucher verification",
+    requiredNow: false,
+  },
+  {
+    name: "SHOW_VERIFICATION_CODES",
+    description:
+      "Set to 'true' ONLY on a private test site with no email provider: it shows voucher codes on screen instead of emailing them. Anyone who sees a code can verify as that person, so turn it off before sharing the site.",
+    neededFor: "Optional - private test deployments",
     requiredNow: false,
   },
   {
