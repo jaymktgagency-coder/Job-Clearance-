@@ -17,9 +17,26 @@ export function emailIsConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
 }
 
-/** True while developing. Controls whether codes may be shown on screen. */
+/** True while developing on your own machine. */
 export function isDevelopment(): boolean {
   return process.env.NODE_ENV !== "production";
+}
+
+/**
+ * May verification codes be shown on screen instead of emailed?
+ *
+ * Plain English: with no email provider there is no inbox to check, so the
+ * code has to appear somewhere or nobody can ever verify. That's fine on your
+ * own machine. On a deployed site it is only allowed if you deliberately switch
+ * it on with SHOW_VERIFICATION_CODES=true — which is reasonable for a private
+ * test link you're sharing with nobody, and must be turned OFF before anyone
+ * you don't know can reach the site. Anyone who can see a code can verify as
+ * that person.
+ */
+export function codesMayBeShownOnScreen(): boolean {
+  if (emailIsConfigured()) return false;
+  if (isDevelopment()) return true;
+  return process.env.SHOW_VERIFICATION_CODES === "true";
 }
 
 export async function sendEmail(opts: {

@@ -72,6 +72,13 @@ export const ENV_VARS: EnvVar[] = [
     requiredNow: false,
   },
   {
+    name: "SHOW_VERIFICATION_CODES",
+    description:
+      "Set to 'true' ONLY on a private test site with no email provider: it shows voucher codes on screen instead of emailing them. Anyone who sees a code can verify as that person, so turn it off before sharing the site.",
+    neededFor: "Optional - private test deployments",
+    requiredNow: false,
+  },
+  {
     name: "NEXT_PUBLIC_SITE_URL",
     description:
       "Where the site lives. http://localhost:3000 on your laptop; your real domain once deployed.",

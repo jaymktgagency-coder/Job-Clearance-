@@ -18,7 +18,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import { sendEmail, emailIsConfigured, isDevelopment } from "@/lib/email";
+import { sendEmail, emailIsConfigured, codesMayBeShownOnScreen } from "@/lib/email";
 import {
   newCode, hashCode, CODE_VALID_MINUTES, MAX_ATTEMPTS, RESEND_COOLDOWN_SECONDS,
 } from "@/lib/verification-codes";
@@ -126,13 +126,22 @@ export async function sendCode(_prev: VerifyState, _formData: FormData): Promise
 
   revalidatePath("/verify");
 
-  // Without an email provider there's no inbox to check, so while developing
-  // the code is shown on screen. This never happens in production.
-  if (!emailIsConfigured() && isDevelopment()) {
+  // Without an email provider there is no inbox to check, so the code is shown
+  // on screen instead — on your own machine always, and on a deployed site
+  // only if SHOW_VERIFICATION_CODES was deliberately switched on.
+  if (codesMayBeShownOnScreen()) {
     return {
       error: null,
       notice: `No email provider is set up yet, so here's the code directly. It expires in ${CODE_VALID_MINUTES} minutes.`,
       devCode: code,
+    };
+  }
+
+  // Never claim an email was sent when it wasn't.
+  if (!emailIsConfigured()) {
+    return {
+      error:
+        "This site can't send email yet, so there's no way to deliver your code. Ask whoever runs it to add an email provider — or ask your employer to invite you directly, which needs no email from us.",
     };
   }
 
