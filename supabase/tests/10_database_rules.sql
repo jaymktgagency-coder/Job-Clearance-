@@ -149,3 +149,24 @@ end $$;
 select must_fail($$insert into public.voucher_profiles (user_id, company_id, status, verification_method, verified_at)
   values ('11111111-1111-1111-1111-111111111111','aaaaaaaa-0000-0000-0000-000000000001','verified','work_email', now())$$,
   'a verified voucher who never affirmed their employer permits it');
+
+-- --- the fee cannot be set by whoever posts the job ------------------------
+-- An employer may create jobs for their own company, so the price has to be
+-- imposed by the platform rather than accepted from the caller.
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+  do $$
+  declare v_fee int; v_tier text;
+  begin
+    insert into public.jobs (company_id, title, description, pay_type, status, fee_tier, fee_amount_cents, tier_overridden)
+    values ('aaaaaaaa-0000-0000-0000-000000000001','Bargain Manager','Trying to buy a salaried hire for a cent.',
+            'salaried','draft','tier_1', 1, true)
+    returning fee_amount_cents, fee_tier::text into v_fee, v_tier;
+
+    if v_fee <> 200000 or v_tier <> 'tier_2' then
+      raise exception 'FAIL: an employer set their own fee (% / %)', v_tier, v_fee;
+    end if;
+    raise notice 'PASS: a hand-set fee is overwritten — salaried still costs $2000';
+  end $$;
+rollback;

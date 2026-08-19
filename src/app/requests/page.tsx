@@ -6,7 +6,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { currentProfile } from "@/lib/auth";
-import { withdrawRequest } from "../jobs/actions";
+import { withdrawRequest, confirmHire } from "../jobs/actions";
 import { AiNotice } from "@/components/ai-notice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,13 @@ export default async function RequestsPage() {
 
   const open = (requests ?? []).filter((r) => r.status === "pending").length;
 
+  // Has an employer said they hired this person? Nothing is owed until the
+  // person themselves confirms it, so ask them here.
+  const { data: hires } = await supabase
+    .from("hires")
+    .select("id, start_date, confirmed_by_seeker_at, status, jobs(title), companies(name)")
+    .is("confirmed_by_seeker_at", null);
+
   return (
     <main className="mx-auto w-full max-w-2xl px-6 py-12">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -47,6 +54,32 @@ export default async function RequestsPage() {
         {open} of 5 open. The limit keeps requests meaningful — someone reading
         five focused asks takes them more seriously than fifty scattergun ones.
       </p>
+
+      {(hires ?? []).map((h) => {
+        const job = Array.isArray(h.jobs) ? h.jobs[0] : h.jobs;
+        const co = Array.isArray(h.companies) ? h.companies[0] : h.companies;
+        return (
+          <Card key={h.id as string} className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-base">Did you start at {co?.name}?</CardTitle>
+              <CardDescription>
+                {co?.name} says they hired you as {job?.title}, starting{" "}
+                {h.start_date as string}. Confirm it and the person who vouched for
+                you gets paid — 60 days after your start date.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-center gap-3">
+              <form action={confirmHire}>
+                <input type="hidden" name="hire_id" value={h.id as string} />
+                <Button type="submit" size="sm">Yes, I started there</Button>
+              </form>
+              <p className="text-sm text-muted-foreground">
+                If this isn&apos;t right, don&apos;t confirm it — tell us instead.
+              </p>
+            </CardContent>
+          </Card>
+        );
+      })}
 
       <div className="mt-8 space-y-4">
         {(requests ?? []).map((r) => {

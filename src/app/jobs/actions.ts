@@ -66,3 +66,28 @@ export async function withdrawRequest(formData: FormData): Promise<void> {
 
   revalidatePath("/requests");
 }
+
+/**
+ * The seeker's half of confirming a hire.
+ *
+ * Plain English: an employer saying "we hired them" isn't enough on its own —
+ * they're the one who owes the fee. The person who actually took the job has
+ * to say so too. Only then is anything owed, and only then does the voucher's
+ * 60-day clock start.
+ */
+export async function confirmHire(formData: FormData): Promise<void> {
+  const hireId = String(formData.get("hire_id") ?? "");
+  if (!hireId) return;
+
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return;
+
+  await supabase
+    .from("hires")
+    .update({ confirmed_by_seeker_at: new Date().toISOString() })
+    .eq("id", hireId)
+    .eq("seeker_id", auth.user.id);
+
+  revalidatePath("/requests");
+}
