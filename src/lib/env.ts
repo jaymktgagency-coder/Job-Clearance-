@@ -53,8 +53,8 @@ export const ENV_VARS: EnvVar[] = [
   {
     name: "ANTHROPIC_API_KEY",
     description:
-      "Anthropic (Claude) key, used to read resumes and score candidate fit.",
-    neededFor: "Step 8 - AI resume parsing & fit scores",
+      "Anthropic (Claude) key, used to read resumes and suggest how well a candidate fits a role. Optional — without it the whole app still works, there are simply no AI scores. The score is advisory and never rejects anyone.",
+    neededFor: "Step 8 - reading resumes & fit scores (optional)",
     requiredNow: false,
   },
   {

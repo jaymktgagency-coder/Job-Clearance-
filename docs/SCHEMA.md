@@ -37,7 +37,9 @@ deleting the login erases this row and everything attached to it. That's how
 **`seeker_profiles`** — the seeker's details: headline, location, skills, bio,
 and where their resume file lives. Nearly every field is optional on purpose,
 because the sign-up form has to be fast. Two columns (`resume_parsed`,
-`resume_parsed_at`) sit empty until Step 8, when the AI fills them in.
+`resume_parsed_at`) hold what the AI read out of the resume file. Only Vouch's
+own server can write them — a seeker cannot put words in the AI's mouth — but
+a seeker can always clear them, because it is their data.
 
 **`voucher_profiles`** — one row per voucher: which company they work for,
 which branch, their work email, and how they were verified. Also the payout
@@ -119,10 +121,18 @@ enforced by the database rather than by hoping the screen prevents it.
 only ever see vouched candidates" true by construction instead of true by
 remembering to filter.
 
-The AI columns (`ai_fit_score`, `ai_reasoning`) are advisory. A rule on the
-table makes it physically impossible to store a score without its written
-reasoning — so a screen can never show a number with no explanation behind it.
-Nothing here auto-rejects anyone; a human moves every candidate.
+The AI columns (`ai_fit_score`, `ai_reasoning`, `ai_scored_at`) are advisory,
+and three separate rules keep them that way:
+
+- a check constraint makes it **impossible to store a score without its written
+  reasoning**, so a screen can never show a number with no explanation;
+- a trigger **rejects any update that writes a score and changes the status**,
+  which is what makes "the AI never auto-rejects anyone" structural rather than
+  a promise. The score arrives; then a person decides;
+- that same trigger **discards AI columns written from a login**. An employer
+  legitimately updates their own candidates — that is how someone moves from
+  'new' to 'interviewed' — but they cannot type their own score into the
+  platform's field. Their status change still goes through.
 
 **`application_events`** — a log of every status change: who moved it, when,
 and from what to what. Feeds dispute resolution and, in Step 2b, the retention

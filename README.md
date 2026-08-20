@@ -43,9 +43,14 @@ Requirements, not preferences. Most are enforced by the database itself, so no
 future change can quietly drop them.
 
 1. **The AI score is advisory only.** It never auto-rejects anyone. A score
-   cannot even be stored without its written reasoning, and a human makes every
-   decision.
-2. **Seekers are told, visibly, that AI helps rank their application.**
+   cannot be stored without its written reasoning, and an update that writes a
+   score *and* moves a candidate is rejected by the database outright — the
+   machine's opinion and the human's decision cannot happen in one breath.
+   No login can write a score either; the AI's output belongs to the platform,
+   not to the employer reading it.
+2. **Seekers are told, visibly, that AI helps rank their application** — and
+   are shown exactly what it read from their resume, so a misreading is
+   something they can see and correct.
 3. **Job seekers are never charged.**
 4. **No scraping.** No LinkedIn, no job boards, no imported applicants. Vouchers
    self-declare their employer and verify by work email or employer invitation.
@@ -61,6 +66,43 @@ future change can quietly drop them.
    the second simply unlocks work-email voucher verification.
 9. **No money moves from a login.** Payouts and charges have no update
    policies at all — every movement happens server-side.
+10. **The AI is told what not to weigh.** Age, sex, race, nationality,
+    religion, disability and family status are excluded, and so are school
+    prestige, employment gaps, and how polished the writing is. Hourly work
+    counts the same as salaried. There is no field in which a protected
+    characteristic could even be recorded.
+
+---
+
+## What the AI actually does
+
+Two jobs, both optional. Delete `ANTHROPIC_API_KEY` and everything else in
+Vouch carries on working — resumes upload, vouches send, employers hire.
+
+**When a seeker uploads a resume**, Claude reads it into structured facts —
+jobs held, dates, skills, certificates — and the seeker is shown exactly what
+it took away. PDFs are read directly; Word `.docx` files are unzipped and read;
+the old `.doc` format is refused with an explanation rather than a guess.
+
+**When a voucher writes a vouch**, the candidate that vouch creates is scored
+1–100 against the role, with written reasoning, the specific evidence it used,
+and a list of what it could not tell from the material.
+
+Both run *after* the page has already come back, so nobody waits on them, and
+a failure costs a score rather than an upload or a vouch.
+
+The score is a suggestion about reading order. It cannot do anything else:
+
+| | |
+|---|---|
+| Store a score with no reasoning | Rejected by a check constraint |
+| Score someone and move them in one update | Rejected by a trigger |
+| An employer typing their own "AI score" | Silently discarded; their status change still goes through |
+| A seeker editing what we read from their resume | Silently discarded — but clearing it is always allowed |
+
+Costs a few cents per resume and per candidate. `npm run test:ai` checks all of
+the above against the real API, including whether swapping a candidate's name
+moves their score. It must not.
 
 ---
 
@@ -71,7 +113,7 @@ future change can quietly drop them.
 | Next.js 16 (App Router) + TypeScript | The website itself, pages and server code |
 | Tailwind CSS v4 + shadcn/ui | Styling and ready-made UI components |
 | Supabase | Database (Postgres), logins, resume file storage |
-| Anthropic API | Resume parsing, candidate fit scoring |
+| Anthropic API | Resume parsing, candidate fit scoring (optional) |
 | Resend | Transactional email (voucher verification codes) |
 | Stripe Connect | Payments — **stubbed out, not implemented in v1** |
 | Vercel | Hosting |
@@ -83,6 +125,14 @@ npm install
 cp .env.example .env.local   # then paste your keys in — see SETUP.md
 npm run seed                 # fake data to click around (after the migrations)
 npm run dev
+```
+
+Optional, once an Anthropic key is in `.env.local`:
+
+```bash
+npm run ai:backfill -- --dry-run   # what has no score yet
+npm run ai:backfill                # read and score all of it
+npm run test:ai                    # prove the AI rules still hold
 ```
 
 - <http://localhost:3000> — the site
@@ -108,8 +158,14 @@ src/
     layout.tsx            Wrapper around every page: fonts, tab title
   components/
     ai-notice.tsx         The AI disclosure seekers must see
+    parsed-resume.tsx     "Here's what we read from your resume"
     ui/                   shadcn/ui building blocks
   lib/
+    ai/client.ts          The Claude connection, and the on/off switch
+    ai/resume-file.ts     Reading a PDF, a Word file, or plain text
+    ai/parse-resume.ts    Turning a resume into structured facts
+    ai/score-fit.ts       The fit score, and the rules it must follow
+    ai/run.ts             Wiring both of those to the database
     env.ts                Every environment variable, in one list
     supabase/client.ts    Supabase connection for browser code
     supabase/server.ts    Supabase connection for server code (+ admin version)
@@ -119,12 +175,14 @@ src/
     verification-codes.ts The 6-digit code: making it, hashing it, expiring it
   proxy.ts                Runs before every request; keeps logins alive
 supabase/
-  migrations/             SQL applied to Supabase, in order (0001 - 0007)
-  tests/                  58 checks that prove the rules above still hold
+  migrations/             SQL applied to Supabase, in order (0001 - 0008)
+  tests/                  68 checks that prove the rules above still hold
 scripts/
   seed.mts                Fills the database with demo data
+  ai-backfill.mts         Reads and scores anything the AI hasn't seen yet
 tests/
   *.mjs                   Browser tests for sign-up, sign-in, and invites
+  ai-layer.mts            Real calls to Claude: reading, scoring, and bias
 docs/
   SCHEMA.md               What every table holds, in plain English
 ```
@@ -146,4 +204,6 @@ docs/
       write a vouch or decline
 - [x] **Step 7** — Employer flow: post a role, work the vouched candidate
       list, record a hire (which both sides must confirm)
-- [ ] Step 8 — AI layer: resume parsing + fit scoring with written reasoning
+- [x] **Step 8** — AI layer: resumes read into structured facts on upload,
+      and a 1-100 fit score with written reasoning when a vouch arrives. Both
+      optional; both advisory; neither can decide anything.

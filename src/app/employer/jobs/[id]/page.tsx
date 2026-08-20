@@ -138,18 +138,32 @@ export default async function CandidatesPage(props: PageProps<"/employer/jobs/[i
                   </div>
                 ) : null}
 
-                {/* The AI score, when there is one. Never on its own. */}
+                {/* The AI score, when there is one. Never on its own — the
+                    database refuses to store a score without its reasoning,
+                    and refuses any update that scores and moves someone at
+                    the same time. */}
                 <div className="rounded-md border bg-muted/40 p-3">
                   {c.ai_fit_score != null ? (
                     <>
-                      <p className="font-medium">AI fit score: {c.ai_fit_score} / 100 — advisory only</p>
-                      <p className="mt-1 whitespace-pre-line text-muted-foreground">{c.ai_reasoning}</p>
+                      <p className="font-medium">
+                        AI fit score: {c.ai_fit_score} / 100 — advisory only
+                      </p>
+                      <p className="mt-1 whitespace-pre-line text-muted-foreground">
+                        {c.ai_reasoning}
+                      </p>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        A suggestion about reading order, nothing more. It is
+                        told to ignore age, sex, race, nationality, religion,
+                        disability, family status, school prestige, employment
+                        gaps, and how polished the writing is.
+                      </p>
                     </>
                   ) : (
                     <p className="text-muted-foreground">
-                      No AI score yet — resume reading and fit scoring arrive in the next
-                      step. When it does, the score is advisory and always shown with its
-                      reasoning.
+                      No AI score for this candidate. That happens when scoring is
+                      switched off, or when it couldn&apos;t produce reasoning it could
+                      stand behind — we store nothing rather than a bare number. Read
+                      the vouch; it is the better signal anyway.
                     </p>
                   )}
                   <p className="mt-2 text-muted-foreground">
