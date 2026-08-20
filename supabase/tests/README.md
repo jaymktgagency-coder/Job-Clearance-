@@ -22,6 +22,12 @@ They check, against a real Postgres database, that:
 - a voucher at one company sees zero requests and zero resumes from any other
 - unverified vouchers see nothing at all
 - verification codes are invisible to every logged-in user
+- an AI score cannot be stored without its written reasoning
+- an update cannot both score a candidate and move them — not even from our
+  own server code
+- an employer cannot write their own "AI score", and their real status change
+  still goes through when they try
+- a seeker cannot write their own parsed resume, but can always erase it
 
 ## Running them
 
@@ -34,12 +40,19 @@ psql -d yourtestdb -v ON_ERROR_STOP=1 \
   -f supabase/migrations/0002_row_level_security.sql \
   -f supabase/migrations/0003_money_and_reputation.sql \
   -f supabase/migrations/0004_money_row_level_security.sql \
+  -f supabase/migrations/0005_fix_company_member_signup.sql \
+  -f supabase/migrations/0006_resume_storage.sql \
+  -f supabase/migrations/0007_lock_the_fee.sql \
+  -f supabase/migrations/0008_ai_is_advisory.sql \
   -f supabase/tests/10_database_rules.sql \
   -f supabase/tests/20_caps_and_privacy.sql \
-  -f supabase/tests/30_money_and_reputation.sql
+  -f supabase/tests/30_money_and_reputation.sql \
+  -f supabase/tests/40_resume_storage.sql \
+  -f supabase/tests/50_ai_is_advisory.sql
 ```
 
-Every check prints `PASS`. Any failure stops the run.
+All 68 checks print `PASS`, and the run ends with
+`50_ai_is_advisory.sql: all checks passed`. Any failure stops the run.
 
 `00_supabase_stubs.sql` fakes the small parts of Supabase the migrations rely
 on (the `auth` schema and the three Supabase roles) so the same SQL can run on

@@ -1,8 +1,11 @@
-# Browser tests
+# Tests
 
-**You don't need to run these.** They drive a real browser through the parts
-of Vouch a person actually clicks, so a change to sign-up or the dashboards
-can be checked without doing it by hand every time.
+**You don't need to run these.** Most of them drive a real browser through the
+parts of Vouch a person actually clicks, so a change to sign-up or the
+dashboards can be checked without doing it by hand every time. One of them
+(`ai-layer.mts`) calls Claude for real instead.
+
+## Browser tests
 
 | File | What it covers |
 |---|---|
@@ -34,6 +37,34 @@ the database, not just what the screen said.
 
 They clean up after themselves — any accounts or companies they create are
 deleted at the end.
+
+## The AI test
+
+`ai-layer.mts` is different: no browser, and it calls the Anthropic API for
+real, so it costs a few cents and takes a couple of minutes.
+
+```bash
+npm run test:ai
+```
+
+With no `ANTHROPIC_API_KEY` it exits quietly — that is a valid state, because
+the app runs without one. With a key, 26 checks cover:
+
+- reading a real PDF, a real Word `.docx`, and a text file, and refusing the
+  old `.doc` format with an explanation rather than a guess
+- the parser recording what a resume says — and **no** age, sex, race,
+  nationality, religion, disability, or family status. There is no field for
+  any of it, and the instructions forbid inferring it
+- a strong candidate scoring above a weak one, both with reasoning attached
+- a candidate with **no resume** still being scored, with the gaps listed
+  rather than counted against them
+- the reasoning never telling the employer to reject, drop, or screen out
+  anyone — it is advice about reading order, not a decision
+- **the same resume under two different names scoring the same.** If this one
+  ever fails, stop and find out why before shipping anything
+
+`tests/resolve-ts.mjs` is plumbing: it lets plain `node` import the app's
+TypeScript files so the test exercises the real code rather than a copy.
 
 ## Note on email confirmation
 

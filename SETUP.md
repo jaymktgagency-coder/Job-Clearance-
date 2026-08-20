@@ -70,7 +70,7 @@ step that needs them.
 |---|---------|------------------------|-----------|------|
 | 1 | **Supabase** | Database, user logins, resume file storage | **Step 1 (now)** | Free tier |
 | 2 | **Resend** | Sends the voucher's 6-digit verification email | Step 4 — *optional while developing* | Free tier (100 emails/day) |
-| 3 | **Anthropic** | Reads resumes, writes fit scores | Step 8 | Pay-as-you-go, a few cents |
+| 3 | **Anthropic** | Reads resumes, writes fit scores | Step 8 — *optional, the app runs without it* | Pay-as-you-go, a few cents |
 | 4 | **Vercel** | Puts the site on the real internet | When you're ready to launch | Free tier |
 | 5 | **GitHub** | Stores the code (you already have this) | Already done | Free |
 | 6 | ~~Stripe~~ | Payments — **deliberately skipped in v1** | Not yet | — |
@@ -222,6 +222,20 @@ Your Supabase project is connected but empty. This creates the tables.
 Order matters: 0001 builds the tables, 0002 locks them down. Running 0002
 first will fail.
 
+There are eight migration files in total, and they must all be run, **in
+number order**, on a fresh database:
+
+| File | What it adds |
+|---|---|
+| `0001_core_schema.sql` | The 15 core tables |
+| `0002_row_level_security.sql` | Who can see and change what |
+| `0003_money_and_reputation.sql` | Hires, payouts, charges, credits, track record |
+| `0004_money_row_level_security.sql` | The same, locked down |
+| `0005_fix_company_member_signup.sql` | Fixes a bug that broke employer sign-up |
+| `0006_resume_storage.sql` | The private resume file store |
+| `0007_lock_the_fee.sql` | Stops an employer setting their own fee |
+| `0008_ai_is_advisory.sql` | Stops an AI score deciding anything, or being faked |
+
 > **If you see "type already exists" or "relation already exists":** you've run
 > the file twice. That's harmless — the tables are already there. If you'd
 > rather start clean, run `drop schema public cascade; create schema public;`
@@ -286,8 +300,90 @@ fingerprint is ever stored.
 
 ---
 
+---
+
+## Part 8 — Switch on the AI (optional)
+
+Vouch works without this. Skip it and everything still runs; there are simply
+no AI scores. Turn it on when you want resumes read and candidates ranked.
+
+### 8.1 Get an Anthropic key
+
+1. Go to <https://console.anthropic.com> and sign up.
+2. Add a payment method under **Billing**. This is pay-as-you-go — you're
+   billed for what you use, not a subscription.
+3. Go to **API keys** → **Create key**. Name it `vouch`. Copy it. It starts
+   with `sk-ant-` and you will only be shown it once.
+4. Paste it into `.env.local`:
+
+   ```
+   ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxx
+   ```
+
+5. Paste it into Vercel too, or it won't work on the live site: your project →
+   **Settings** → **Environment Variables** → Add, name `ANTHROPIC_API_KEY`,
+   tick all three environments, Save. Then **Deployments** → the latest one →
+   **Redeploy**. Environment variables are only picked up at build time.
+
+**What it costs.** A few cents per resume read and per candidate scored — a
+hundred candidates is roughly the price of a coffee. Set a monthly cap under
+**Billing → Limits** if you'd rather not think about it.
+
+**Treat this key like the Supabase secret key.** It bills your card. Never
+screenshot it, never paste it into a chat window, and if it ever leaks, delete
+it in the console and make a new one.
+
+### 8.2 Catch up anything from before
+
+Resumes uploaded and vouches written before the key existed have no AI output.
+This reads and scores all of them:
+
+```bash
+npm run ai:backfill -- --dry-run   # says what it would do, writes nothing
+npm run ai:backfill                # actually does it
+```
+
+Safe to run twice — it skips anything already done.
+
+### 8.3 See it working
+
+- Upload a resume at <http://localhost:3000/profile>. Within a minute,
+  refresh: a card appears headed **"What we read from your resume."**
+- Sign in as a voucher, write a vouch from `/inbox`, then sign in as the
+  employer for that role. The candidate now carries a score out of 100 with
+  its reasoning underneath.
+
+### 8.4 The rules it runs under
+
+These are enforced by the database, not by good intentions:
+
+- A score **cannot be stored without its written reasoning.**
+- A single update **cannot both score someone and move them.** The score
+  arrives; a person on the employer's screen decides what happens next.
+- **Nobody with a login can write a score** — not even the employer reading
+  it. The AI's output is the platform's.
+- A seeker **can always erase** what we read from their resume, and deleting
+  their account erases everything.
+- The model is told to ignore age, sex, race, nationality, religion,
+  disability and family status, along with school prestige, employment gaps,
+  and how polished the writing is. Hourly work counts the same as salaried.
+
+To check all of that yourself: `npm run test:ai`. It calls the real API and,
+among other things, scores the same resume under two different names to see
+whether the number moves. It costs a few cents and takes a couple of minutes.
+
+---
+
 ## What's next
 
-Step 2b: the money and reputation tables — hires, payouts, employer charges,
-the voucher's public track record, and the abuse flags. Those are meaningless
-until there are hires to attach them to, which is why they come second.
+Nothing in the original build order. Before showing Vouch to anyone outside
+your own testing, two things are still open:
+
+1. **Turn email confirmation back on** in Supabase (Authentication →
+   Providers → Email), and remove `SHOW_VERIFICATION_CODES` from Vercel. Both
+   need a Resend key first — see Part 2, account #2. Until then, anyone with
+   the URL can create an account, and anyone who sees a verification code on
+   screen can verify as that person.
+2. **Payments are still stubbed.** The tables exist and the amounts are
+   correct, but no money moves. That's Stripe Connect, and it's a project of
+   its own.

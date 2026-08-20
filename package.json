@@ -7,9 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed": "node --env-file=.env.local scripts/seed.mts"
+    "seed": "node --env-file=.env.local scripts/seed.mts",
+    "test:ai": "node --experimental-strip-types --import ./tests/resolve-ts.mjs --env-file=.env.local tests/ai-layer.mts",
+    "ai:backfill": "node --experimental-strip-types --import ./tests/resolve-ts.mjs --env-file=.env.local scripts/ai-backfill.mts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.120.0",
     "@base-ui/react": "^1.7.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",

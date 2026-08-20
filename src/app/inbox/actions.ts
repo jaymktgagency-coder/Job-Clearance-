@@ -15,9 +15,12 @@
 
 "use server";
 
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { aiIsConfigured } from "@/lib/ai/client";
+import { applicationForVouch, scoreApplication } from "@/lib/ai/run";
 
 export type VouchState = { error: string | null };
 
@@ -59,12 +62,16 @@ export async function writeVouch(
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { error: "You're not signed in any more. Please sign in again." };
 
-  const { error } = await supabase.from("vouches").insert({
-    intro_request_id: requestId,
-    voucher_id: auth.user.id,
-    relationship,
-    body,
-  });
+  const { data: created, error } = await supabase
+    .from("vouches")
+    .insert({
+      intro_request_id: requestId,
+      voucher_id: auth.user.id,
+      relationship,
+      body,
+    })
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     // The database writes these messages for humans already.
@@ -80,6 +87,25 @@ export async function writeVouch(
       return { error: "That vouch is too short to mean anything. Please write a little more." };
     }
     return { error: `We couldn't save that vouch: ${error.message}` };
+  }
+
+  // Step 8: writing the vouch created a candidate for the employer. Score that
+  // candidate now — after the response has gone back, so the voucher isn't kept
+  // waiting, and with no power to change anything but the two AI columns.
+  //
+  // A failure here costs the employer a score, nothing more. The candidate is
+  // already on their list, because the vouch put them there.
+  const vouchId = created?.id as string | undefined;
+  if (vouchId && aiIsConfigured()) {
+    after(async () => {
+      const applicationId = await applicationForVouch(vouchId);
+      if (!applicationId) {
+        console.log(`[ai] vouch ${vouchId}: no candidate row found, nothing scored`);
+        return;
+      }
+      const result = await scoreApplication(applicationId);
+      console.log(`[ai] candidate ${applicationId}: ${result.ok ? "scored" : "not scored"} — ${result.detail}`);
+    });
   }
 
   revalidatePath("/inbox");

@@ -9,9 +9,12 @@
 
 "use server";
 
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { aiIsConfigured } from "@/lib/ai/client";
+import { parseResumeForSeeker } from "@/lib/ai/run";
 
 export type ProfileState = { error: string | null; notice?: string | null };
 
@@ -127,8 +130,24 @@ export async function uploadResume(
 
   if (saveErr) return { error: `Uploaded, but we couldn't record it: ${saveErr.message}` };
 
+  // Step 8: read the resume with AI — AFTER the page has already come back.
+  // `after` runs once the response is sent, so the seeker never waits on it,
+  // and if it fails the upload above still stands.
+  const userId = ctx.user.id;
+  if (aiIsConfigured()) {
+    after(async () => {
+      const result = await parseResumeForSeeker(userId);
+      console.log(`[ai] resume for ${userId}: ${result.ok ? "read" : "not read"} — ${result.detail}`);
+    });
+  }
+
   revalidatePath("/profile");
-  return { error: null, notice: "Resume uploaded." };
+  return {
+    error: null,
+    notice: aiIsConfigured()
+      ? "Resume uploaded. We're reading it now — refresh in a moment to see what we picked up."
+      : "Resume uploaded.",
+  };
 }
 
 export async function removeResume(): Promise<void> {
