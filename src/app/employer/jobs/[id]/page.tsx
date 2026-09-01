@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import { currentProfile } from "@/lib/auth";
 import { setCandidateStatus } from "../../actions";
 import { HireForm } from "./HireForm";
+import { SeparationPanel, type SeparationHire } from "@/components/separation-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,7 +55,9 @@ export default async function CandidatesPage(props: PageProps<"/employer/jobs/[i
       users!applications_seeker_id_fkey(full_name, seeker_profiles(headline, location, years_experience, skills, resume_path)),
       vouches(body, relationship, disclosed_fee_cents, created_at,
               users!vouches_voucher_id_fkey(full_name, voucher_profiles(job_title))),
-      hires(id, start_date, status, confirmed_by_seeker_at)
+      hires(id, start_date, status, confirmed_by_seeker_at,
+            separated_at, separation_reported_by, separation_reported_at, separation_claimed_date,
+            separation_confirmed_by_employer_at, separation_confirmed_by_seeker_at, separation_disputed_at)
     `)
     .eq("job_id", id)
     .order("created_at", { ascending: false });
@@ -198,12 +201,23 @@ export default async function CandidatesPage(props: PageProps<"/employer/jobs/[i
                 </div>
 
                 {hire ? (
-                  <p className="text-muted-foreground">
-                    Hire recorded, starting {hire.start_date}.{" "}
-                    {hire.confirmed_by_seeker_at
-                      ? "They've confirmed it too, so the fee is due and the voucher's share is scheduled."
-                      : "Waiting for them to confirm — nothing is owed until they do."}
-                  </p>
+                  <>
+                    <p className="text-muted-foreground">
+                      Hire recorded, starting {hire.start_date}.{" "}
+                      {hire.confirmed_by_seeker_at
+                        ? "They've confirmed it too, so the fee is due and the voucher's share is scheduled."
+                        : "Waiting for them to confirm — nothing is owed until they do."}
+                    </p>
+
+                    {/* Did this job end? Either side can say so; the other has
+                        to agree before any money moves. Without this the
+                        60-day hold means nothing. */}
+                    <SeparationPanel
+                      hire={hire as unknown as SeparationHire}
+                      side="employer"
+                      otherParty={person?.full_name?.split(" ")[0] ?? "them"}
+                    />
+                  </>
                 ) : null}
               </CardContent>
             </Card>

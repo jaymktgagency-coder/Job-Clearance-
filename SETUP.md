@@ -235,6 +235,7 @@ number order**, on a fresh database:
 | `0006_resume_storage.sql` | The private resume file store |
 | `0007_lock_the_fee.sql` | Stops an employer setting their own fee |
 | `0008_ai_is_advisory.sql` | Stops an AI score deciding anything, or being faked |
+| `0009_separation_and_hire_integrity.sql` | Recording that a job ended, and stopping either side rewriting a hire |
 
 > **If you see "type already exists" or "relation already exists":** you've run
 > the file twice. That's harmless — the tables are already there. If you'd
@@ -379,11 +380,15 @@ whether the number moves. It costs a few cents and takes a couple of minutes.
 Nothing in the original build order. Before showing Vouch to anyone outside
 your own testing, two things are still open:
 
-1. **Turn email confirmation back on** in Supabase (Authentication →
+1. **Fill in `src/lib/legal.ts`.** Your company name, address, and support
+   email appear on the terms, privacy, refund and support pages, and are all
+   still `TODO`. The /support page shows a red warning until they are. Stripe
+   reads those pages by hand when approving a marketplace.
+2. **Turn email confirmation back on** in Supabase (Authentication →
    Providers → Email), and remove `SHOW_VERIFICATION_CODES` from Vercel. Both
    need a Resend key first — see Part 2, account #2. Until then, anyone with
    the URL can create an account, and anyone who sees a verification code on
    screen can verify as that person.
-2. **Payments are still stubbed.** The tables exist and the amounts are
+3. **Payments are still stubbed.** The tables exist and the amounts are
    correct, but no money moves. That's Stripe Connect, and it's a project of
    its own.

@@ -65,7 +65,9 @@ future change can quietly drop them.
    *Verified Domain* (that, plus a proven email domain). Both are legitimate;
    the second simply unlocks work-email voucher verification.
 9. **No money moves from a login.** Payouts and charges have no update
-   policies at all — every movement happens server-side.
+   policies at all — every movement happens server-side. Each side of a hire
+   may write only its own half: an employer cannot sign for the person they
+   hired, neither can rewrite the fee, and neither can end a job alone.
 10. **The AI is told what not to weigh.** Age, sex, race, nationality,
     religion, disability and family status are excluded, and so are school
     prestige, employment gaps, and how polished the writing is. Hourly work
@@ -154,11 +156,16 @@ src/
     requests/             The seeker's own intro requests
     inbox/                The voucher's requests, and writing a vouch
     employer/jobs/        Posting roles and working the candidate list
+    hires/actions.ts      Recording that a job ended, from either side
+    terms/ privacy/       The legal pages Stripe's review looks for
+    refunds/ support/     Refund policy, and how to reach a person
     setup/page.tsx        Setup health check (/setup)
     layout.tsx            Wrapper around every page: fonts, tab title
   components/
     ai-notice.tsx         The AI disclosure seekers must see
     parsed-resume.tsx     "Here's what we read from your resume"
+    separation-panel.tsx  "Did this job end?" - shown to both sides
+    site-footer.tsx       Terms/privacy/refunds, reachable everywhere
     ui/                   shadcn/ui building blocks
   lib/
     ai/client.ts          The Claude connection, and the on/off switch
@@ -167,6 +174,7 @@ src/
     ai/score-fit.ts       The fit score, and the rules it must follow
     ai/run.ts             Wiring both of those to the database
     env.ts                Every environment variable, in one list
+    legal.ts              Company name and address - every legal blank, once
     supabase/client.ts    Supabase connection for browser code
     supabase/server.ts    Supabase connection for server code (+ admin version)
     supabase/health.ts    Connection test used by /setup
@@ -175,8 +183,8 @@ src/
     verification-codes.ts The 6-digit code: making it, hashing it, expiring it
   proxy.ts                Runs before every request; keeps logins alive
 supabase/
-  migrations/             SQL applied to Supabase, in order (0001 - 0008)
-  tests/                  68 checks that prove the rules above still hold
+  migrations/             SQL applied to Supabase, in order (0001 - 0009)
+  tests/                  83 checks that prove the rules above still hold
 scripts/
   seed.mts                Fills the database with demo data
   ai-backfill.mts         Reads and scores anything the AI hasn't seen yet
@@ -204,6 +212,9 @@ docs/
       write a vouch or decline
 - [x] **Step 7** — Employer flow: post a role, work the vouched candidate
       list, record a hire (which both sides must confirm)
+- [x] **Step 9e** — Leaving a job: either side reports it, the other confirms,
+      seven days of silence becomes a dispute. Plus the hire-integrity guard
+      and lapsing credits. The rest of payments (Stripe) is next
 - [x] **Step 8** — AI layer: resumes read into structured facts on upload,
       and a 1-100 fit score with written reasoning when a vouch arrives. Both
       optional; both advisory; neither can decide anything.
