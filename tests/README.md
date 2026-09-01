@@ -85,6 +85,24 @@ It also asserts that what Stripe hands back to Vouch contains a brand and the
 last four digits and **no full card number and no CVC** — the test creates a
 real test card and greps the response for `4242424242424242`.
 
+## The Connect test
+
+`stripe-9c.mts` covers the account a voucher gets paid into.
+
+```bash
+npm run test:9c
+```
+
+It builds its own company and voucher, creates a real Stripe recipient
+account, and checks that the account starts unpayable, that identity and tax
+are NOT marked done while Stripe is still asking, that Stripe's raw
+requirement names are turned into something a person can act on, and that
+both Vouch and Stripe refuse to send money to an unfinished account.
+
+**What it cannot cover:** a completed account. Stripe will not let a platform
+accept its terms of service on someone's behalf for an Express account, so
+finishing onboarding needs a real person on Stripe's form.
+
 ## Note on email confirmation
 
 `invite-flow.mjs` and `onboarding-paths.mjs` create their test accounts through

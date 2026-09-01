@@ -216,6 +216,21 @@ export default async function DashboardPage() {
               </p>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Getting paid</CardTitle>
+              <CardDescription>Half the fee, 60 days after they start</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <p>
+                You can vouch without setting this up. You just can&apos;t be paid
+                until it&apos;s done.
+              </p>
+              <Button size="sm" variant="outline" render={<Link href="/voucher/payouts" />}>
+                Payouts and earnings
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
