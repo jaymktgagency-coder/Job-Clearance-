@@ -42,3 +42,7 @@ next-env.d.ts
 
 # keep the example env file tracked so new machines know what to fill in
 !.env.example
+
+# python bytecode from the ui-ux-pro-max skill scripts
+__pycache__/
+*.pyc
