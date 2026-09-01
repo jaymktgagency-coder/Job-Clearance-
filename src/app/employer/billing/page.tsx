@@ -84,14 +84,22 @@ export default async function BillingPage(props: PageProps<"/employer/billing">)
   const sessionId = typeof params.session_id === "string" ? params.session_id : null;
   const result = sessionId ? await completePaymentMethodSetup(sessionId) : null;
 
-  const saved = company.payment_method_on_file
+  // "On file" means Stripe is actually holding something we can charge — not
+  // merely that the flag is set. Those can disagree: seeded data sets the flag
+  // directly, and a webhook could set it while the details failed to save.
+  // Showing "Payment method ending ····" in that state tells an employer they
+  // are covered when they are not, and they find out at the first charge.
+  const details = company.default_payment_method_type
     ? {
         label: (company.default_payment_method_label as string) ?? "Payment method",
         last4: (company.default_payment_method_last4 as string) ?? "····",
-        type: company.default_payment_method_type as string,
+        type: company.default_payment_method_type as "card" | "us_bank_account",
         updatedAt: company.payment_method_updated_at as string | null,
       }
     : null;
+
+  // Flag set, nothing behind it. Worth saying out loud rather than papering over.
+  const flaggedButEmpty = !!company.payment_method_on_file && !details;
 
   return (
     <main className="mx-auto w-full max-w-2xl px-6 py-12">
@@ -151,26 +159,28 @@ export default async function BillingPage(props: PageProps<"/employer/billing">)
       <Card className="mt-8">
         <CardHeader>
           <CardTitle className="text-base">
-            {saved ? "On file" : "Nothing on file yet"}
+            {details ? "On file" : flaggedButEmpty ? "Needs re-adding" : "Nothing on file yet"}
           </CardTitle>
           <CardDescription>
-            {saved
+            {details
               ? "Held securely by Stripe. Vouch never sees the full number."
-              : "You can browse and post roles without one. You'll need it before a hire can be settled."}
+              : flaggedButEmpty
+                ? "Your account is marked as having a payment method, but Stripe isn't holding one we can charge. Adding it again fixes this."
+                : "You can browse and post roles without one. You'll need it before a hire can be settled."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
-          {saved ? (
+          {details ? (
             <>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">
-                  {saved.label} ending {saved.last4}
+                  {details.label} ending {details.last4}
                 </span>
                 <Badge variant="secondary">
-                  {saved.type === "us_bank_account" ? "Bank account" : "Card"}
+                  {details.type === "us_bank_account" ? "Bank account" : "Card"}
                 </Badge>
               </div>
-              {saved.type === "card" ? (
+              {details.type === "card" ? (
                 <p className="text-muted-foreground">
                   A bank account costs you less on salaried roles — card fees on a
                   $2,000 fee come to about $58, against $5 by bank.
@@ -197,7 +207,7 @@ export default async function BillingPage(props: PageProps<"/employer/billing">)
           ) : (
             <form action={startPaymentMethodSetup}>
               <Button type="submit" disabled={!stripeIsConfigured()}>
-                Add a card or bank account
+                {flaggedButEmpty ? "Add a card or bank account again" : "Add a card or bank account"}
               </Button>
               <p className="mt-2 text-muted-foreground">
                 You&apos;ll enter your details on Stripe&apos;s own site, not ours. Vouch
