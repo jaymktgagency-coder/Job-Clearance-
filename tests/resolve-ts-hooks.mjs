@@ -14,6 +14,20 @@ export async function resolve(specifier, context, nextResolve) {
   try {
     return await nextResolve(specifier, context);
   } catch (error) {
+    const bare = !/^[./]/.test(specifier) && !specifier.startsWith("file:");
+
+    // A package subpath Node won't resolve without the extension, e.g.
+    // `next/headers`. App code omits it because bundlers fill it in.
+    if (bare) {
+      const pkg = resolvePath(process.cwd(), "node_modules", specifier);
+      for (const candidate of [`${pkg}.js`, `${pkg}/index.js`, `${pkg}.mjs`]) {
+        if (existsSync(candidate)) {
+          return nextResolve(pathToFileURL(candidate).href, context);
+        }
+      }
+      throw error;
+    }
+
     // Extensionless relative import: try adding .ts, then /index.ts.
     const parent = context.parentURL ? fileURLToPath(context.parentURL) : process.cwd();
     const base = specifier.startsWith("file:")
