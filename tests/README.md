@@ -66,6 +66,25 @@ the app runs without one. With a key, 26 checks cover:
 `tests/resolve-ts.mjs` is plumbing: it lets plain `node` import the app's
 TypeScript files so the test exercises the real code rather than a copy.
 
+## The Stripe test
+
+`stripe-9a.mts` talks to Stripe for real, in test mode, where no money can
+move. It refuses to run at all against a live key.
+
+```bash
+npm run test:stripe          # with the site running on :3000
+```
+
+15 checks, and the ones that matter are about the webhook: a call with no
+signature is refused, a call with a forged signature is refused, and a
+correctly signed one is accepted. Anyone on the internet can POST to that
+address, so that check is the only thing standing between Stripe's word and
+anyone else's.
+
+It also asserts that what Stripe hands back to Vouch contains a brand and the
+last four digits and **no full card number and no CVC** — the test creates a
+real test card and greps the response for `4242424242424242`.
+
 ## Note on email confirmation
 
 `invite-flow.mjs` and `onboarding-paths.mjs` create their test accounts through

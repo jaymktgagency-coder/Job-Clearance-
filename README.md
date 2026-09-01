@@ -33,7 +33,12 @@ Fees, shares, and caps live in the `platform_settings` table, not in code. The
 price a job was posted under is frozen onto that job, so changing your pricing
 never rewrites a deal you already struck.
 
-Payments are **stubbed out in v1** — the tables exist, no money moves.
+Payments are being wired up now. An employer can save a card or a bank
+account (Step 9a); collecting the fee and paying vouchers comes next. **No
+money moves yet**, and the keys in use are Stripe test keys.
+
+A US bank account costs about $5 on a $2,000 fee against roughly $58 by card,
+which is why both are offered and the bank is nudged for salaried roles.
 
 ---
 
@@ -119,7 +124,7 @@ moves their score. It must not.
 | Supabase | Database (Postgres), logins, resume file storage |
 | Anthropic API | Resume parsing, candidate fit scoring (optional) |
 | Resend | Transactional email (voucher verification codes) |
-| Stripe Connect | Payments — **stubbed out, not implemented in v1** |
+| Stripe | Employer payment methods (Step 9a). Connect payouts to vouchers still to come |
 | Vercel | Hosting |
 
 ## Running it locally
@@ -158,6 +163,8 @@ src/
     requests/             The seeker's own intro requests
     inbox/                The voucher's requests, and writing a vouch
     employer/jobs/        Posting roles and working the candidate list
+    employer/billing/     Saving a card or bank account, via Stripe's own page
+    api/stripe/webhook/   Stripe telling us a payment method was saved
     hires/actions.ts      Recording that a job ended, from either side
     terms/ privacy/       The legal pages Stripe's review looks for
     refunds/ support/     Refund policy, and how to reach a person
@@ -177,6 +184,8 @@ src/
     ai/run.ts             Wiring both of those to the database
     env.ts                Every environment variable, in one list
     legal.ts              Company name and address - every legal blank, once
+    stripe/client.ts      The Stripe connection, and the on/off switch
+    stripe/payment-methods.ts  Saving an employer's card or bank account
     supabase/client.ts    Supabase connection for browser code
     supabase/server.ts    Supabase connection for server code (+ admin version)
     supabase/health.ts    Connection test used by /setup
@@ -214,6 +223,9 @@ docs/
       write a vouch or decline
 - [x] **Step 7** — Employer flow: post a role, work the vouched candidate
       list, record a hire (which both sides must confirm)
+- [ ] **Step 9a** — Employer payment methods: card or US bank account saved
+      through Stripe's own hosted page. Built and tested against Stripe;
+      waiting on migration 0010 to be applied before it can run end to end
 - [x] **Step 9e** — Leaving a job: either side reports it, the other confirms,
       seven days of silence becomes a dispute. Plus the hire-integrity guard
       and lapsing credits. The rest of payments (Stripe) is next

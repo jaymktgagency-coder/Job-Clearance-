@@ -304,6 +304,51 @@ fingerprint is ever stored.
 
 ---
 
+## Part 9 — Switch on payments (Stripe)
+
+### 9.1 Keys
+
+1. <https://stripe.com> → sign up. Turn **Test mode** on (toggle, top right).
+2. **Developers → API keys.** Copy the publishable key, and **Reveal test key**
+   for the secret. Both are long and both contain `test`.
+3. Into `.env.local`:
+
+   ```
+   STRIPE_SECRET_KEY=sk_test_...
+   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+   ```
+
+### 9.2 The webhook secret
+
+Some things finish after the employer has closed the tab — a bank account
+verified by micro-deposits takes a couple of days. Stripe calls Vouch when
+that happens, and Vouch **refuses** the call unless it can prove it came from
+Stripe.
+
+1. **Developers → Webhooks** → open the endpoint pointing at
+   `/api/stripe/webhook` → **Reveal** the signing secret. It starts `whsec_`.
+2. Into `.env.local` as `STRIPE_WEBHOOK_SECRET=whsec_...`, and into Vercel too.
+
+Without it the webhook returns 503 and logs why. That is deliberate: acting on
+a call you cannot verify is how money goes missing.
+
+### 9.3 Try it
+
+Sign in as an employer → **Your roles** → **Payment method** → *Add a card or
+bank account*. You land on a page hosted by Stripe. Test card
+`4242 4242 4242 4242`, any future expiry, any CVC. Come back and it says
+"Visa ending 4242".
+
+Nothing is charged. `mode: setup` means "save this for later".
+
+### 9.4 What Vouch can and cannot see
+
+Vouch never receives a card number, a bank account number, or a CVC — those
+are typed on Stripe's own domain. What comes back is an identifier, a brand,
+and the last four digits. There is a test that asserts exactly this.
+
+---
+
 ## Part 8 — Switch on the AI (optional)
 
 Vouch works without this. Skip it and everything still runs; there are simply
