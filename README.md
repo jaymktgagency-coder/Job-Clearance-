@@ -63,7 +63,9 @@ future change can quietly drop them.
 8. **A business without a domain is still a real business.** Two badges:
    *Verified Business* (payment method + business registration) and
    *Verified Domain* (that, plus a proven email domain). Both are legitimate;
-   the second simply unlocks work-email voucher verification.
+   the second simply unlocks work-email voucher verification. Neither can be
+   awarded by the company itself — a company may *claim* a domain, and only
+   Vouch marks one proven.
 9. **No money moves from a login.** Payouts and charges have no update
    policies at all — every movement happens server-side. Each side of a hire
    may write only its own half: an employer cannot sign for the person they
@@ -183,8 +185,8 @@ src/
     verification-codes.ts The 6-digit code: making it, hashing it, expiring it
   proxy.ts                Runs before every request; keeps logins alive
 supabase/
-  migrations/             SQL applied to Supabase, in order (0001 - 0009)
-  tests/                  83 checks that prove the rules above still hold
+  migrations/             SQL applied to Supabase, in order (0001 - 0010)
+  tests/                  88 checks that prove the rules above still hold
 scripts/
   seed.mts                Fills the database with demo data
   ai-backfill.mts         Reads and scores anything the AI hasn't seen yet

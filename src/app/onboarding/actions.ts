@@ -158,7 +158,10 @@ export async function completeOnboarding(
   const { data: domains } = await admin
     .from("company_domains")
     .select("domain")
-    .eq("company_id", companyId);
+    .eq("company_id", companyId)
+    // Claimed is not proven. Anyone can type "starbucks.com" into a form;
+    // only a domain Vouch has checked unlocks work-email verification.
+    .not("verified_at", "is", null);
 
   if (!domains || domains.length === 0) {
     return {
