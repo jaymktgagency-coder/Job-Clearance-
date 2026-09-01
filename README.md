@@ -75,6 +75,9 @@ future change can quietly drop them.
    policies at all — every movement happens server-side. Each side of a hire
    may write only its own half: an employer cannot sign for the person they
    hired, neither can rewrite the fee, and neither can end a job alone.
+11. **No money leaves until money arrived.** A voucher's payout will not
+    release against an unpaid fee — not even on day 60. A bank debit still in
+    flight does not count as arrived.
 10. **The AI is told what not to weigh.** Age, sex, race, nationality,
     religion, disability and family status are excluded, and so are school
     prestige, employment gaps, and how polished the writing is. Hourly work
@@ -186,6 +189,7 @@ src/
     legal.ts              Company name and address - every legal blank, once
     stripe/client.ts      The Stripe connection, and the on/off switch
     stripe/payment-methods.ts  Saving an employer's card or bank account
+    stripe/charges.ts     Collecting the fee — the only place money is taken
     supabase/client.ts    Supabase connection for browser code
     supabase/server.ts    Supabase connection for server code (+ admin version)
     supabase/health.ts    Connection test used by /setup
@@ -194,8 +198,8 @@ src/
     verification-codes.ts The 6-digit code: making it, hashing it, expiring it
   proxy.ts                Runs before every request; keeps logins alive
 supabase/
-  migrations/             SQL applied to Supabase, in order (0001 - 0010)
-  tests/                  88 checks that prove the rules above still hold
+  migrations/             SQL applied to Supabase, in order (0001 - 0011)
+  tests/                  99 checks that prove the rules above still hold
 scripts/
   seed.mts                Fills the database with demo data
   ai-backfill.mts         Reads and scores anything the AI hasn't seen yet
@@ -223,7 +227,10 @@ docs/
       write a vouch or decline
 - [x] **Step 7** — Employer flow: post a role, work the vouched candidate
       list, record a hire (which both sides must confirm)
-- [ ] **Step 9a** — Employer payment methods: card or US bank account saved
+- [ ] **Step 9b** — Charging the fee when both sides confirm a hire, with the
+      rule that no payout releases against an unpaid fee. Built and tested
+      locally; migration 0011 not yet applied to the live database
+- [x] **Step 9a** — Employer payment methods: card or US bank account saved
       through Stripe's own hosted page. Built and tested against Stripe;
       waiting on migration 0010 to be applied before it can run end to end
 - [x] **Step 9e** — Leaving a job: either side reports it, the other confirms,

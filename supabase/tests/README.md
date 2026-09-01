@@ -35,6 +35,11 @@ They check, against a real Postgres database, that:
 - an unanswered separation becomes a dispute after 7 days, deciding nothing
 - an early departure credits the employer and never refunds cash
 - a lapsed credit cannot be spent
+- a voucher's payout is held, not released, while the employer's fee is unpaid
+- a fee covered entirely by credit counts as settled, and releases the payout
+- a bank debit still in flight does not count as money arrived
+- an employer cannot waive, delete, or mark their own fee paid — checked
+  against BOTH locks, row-level security and the trigger behind it
 - a company cannot award itself a verification badge, at creation or after
 - a company may claim an email domain, but claiming proves nothing and
   unlocks nothing until Vouch marks it proven
@@ -57,17 +62,19 @@ psql -d yourtestdb -v ON_ERROR_STOP=1 \
   -f supabase/migrations/0008_ai_is_advisory.sql \
   -f supabase/migrations/0009_separation_and_hire_integrity.sql \
   -f supabase/migrations/0010_payment_methods_and_company_trust.sql \
+  -f supabase/migrations/0011_collect_the_fee.sql \
   -f supabase/tests/10_database_rules.sql \
   -f supabase/tests/20_caps_and_privacy.sql \
   -f supabase/tests/30_money_and_reputation.sql \
   -f supabase/tests/40_resume_storage.sql \
   -f supabase/tests/50_ai_is_advisory.sql \
   -f supabase/tests/60_separation_and_integrity.sql \
-  -f supabase/tests/70_company_trust.sql
+  -f supabase/tests/70_company_trust.sql \
+  -f supabase/tests/80_collect_the_fee.sql
 ```
 
-All 88 checks print `PASS`, and the run ends with
-`70_company_trust.sql: all checks passed`. Any failure stops the
+All 99 checks print `PASS`, and the run ends with
+`80_collect_the_fee.sql: all checks passed`. Any failure stops the
 run. `60_` builds its own company and people, so it also passes on its own.
 
 `00_supabase_stubs.sql` fakes the small parts of Supabase the migrations rely

@@ -57,6 +57,8 @@ quietly drop them.
    verification.
 9. **No money moves from a login.** Payouts and charges have no UPDATE policies
    at all.
+10. **No money leaves until money arrived.** A payout will not release against
+    an unpaid charge. `processing` (a bank debit in flight) is not settled.
 
 ## Money model
 
@@ -113,8 +115,8 @@ src/
     ai/{client,resume-file,parse-resume,score-fit,run}.ts
     stripe/{client,payment-methods}.ts
   proxy.ts               -- Next 16 renamed middleware.ts; exports proxy()
-supabase/migrations/     0001-0010
-supabase/tests/          00 stubs + 10..70, 88 checks
+supabase/migrations/     0001-0011
+supabase/tests/          00 stubs + 10..80, 99 checks
 scripts/                 seed.mts, ai-backfill.mts
 tests/                   7 browser tests (.mjs) + ai-layer.mts + stripe-9a.mts
 ```
@@ -140,6 +142,8 @@ understanding the attack it stops.
 | 0010 | `protect_company_domain()` | Same stranger claimed `starbucks.com`. `domain` is UNIQUE, so a squatter permanently blocks the real company |
 | 0001 | `protect_voucher_verification()` | Voucher marked themselves verified |
 | 0003 | `guard_payout_release()` | Payout released without identity + tax details |
+| 0011 | `charge_is_settled()` gate in `release_due_payouts()` | A voucher's payout released on day 60 with the employer's fee never collected — Vouch paying out its own money |
+| 0011 | `protect_employer_charge()` | Second lock under the SELECT-only policy: even if an UPDATE policy is ever added, an employer still cannot waive their own bill |
 
 Shape they all share: **trusted callers pass through, everyone else is either
 silently reverted or raised at.** Silent revert where a legitimate update is
@@ -247,6 +251,7 @@ failures.
 | `0008_ai_is_advisory.sql` | AI columns are platform-only and can never decide |
 | `0009_separation_and_hire_integrity.sql` | departure flow; each side writes only its own half; credits lapse |
 | `0010_payment_methods_and_company_trust.sql` | Stripe columns; badges and domain claims are platform-only |
+| `0011_collect_the_fee.sql` | Collect the fee off-session; **no payout releases against an unpaid charge** |
 
 ## Testing
 

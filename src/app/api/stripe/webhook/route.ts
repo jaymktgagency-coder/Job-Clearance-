@@ -22,6 +22,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe, stripeIsConfigured } from "@/lib/stripe/client";
 import { saveDefaultPaymentMethod } from "@/lib/stripe/payment-methods";
+import { recordIntentOutcome } from "@/lib/stripe/charges";
 
 // Webhooks are never prerendered and never cached.
 export const dynamic = "force-dynamic";
@@ -106,6 +107,18 @@ export async function POST(request: Request) {
           await saveDefaultPaymentMethod(companyId, methodId);
           console.log(`[stripe] setup completed later for company ${companyId}`);
         }
+        break;
+      }
+
+      // The employer's fee: arrived, still in flight, or declined. A bank
+      // debit lands here days after it was started, which is the main reason
+      // this endpoint exists at all.
+      case "payment_intent.succeeded":
+      case "payment_intent.processing":
+      case "payment_intent.payment_failed": {
+        const intent = event.data.object as Stripe.PaymentIntent;
+        const outcome = await recordIntentOutcome(intent);
+        console.log(`[stripe] ${event.type}: ${outcome}`);
         break;
       }
 

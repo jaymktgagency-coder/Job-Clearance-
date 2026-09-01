@@ -237,6 +237,7 @@ number order**, on a fresh database:
 | `0008_ai_is_advisory.sql` | Stops an AI score deciding anything, or being faked |
 | `0009_separation_and_hire_integrity.sql` | Recording that a job ended, and stopping either side rewriting a hire |
 | `0010_payment_methods_and_company_trust.sql` | Where Stripe's identifiers live, and stopping a company awarding itself a badge |
+| `0011_collect_the_fee.sql` | Charging the fee, and refusing to pay a voucher before the employer's money arrives |
 
 > **If you see "type already exists" or "relation already exists":** you've run
 > the file twice. That's harmless — the tables are already there. If you'd
