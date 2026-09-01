@@ -199,7 +199,7 @@ src/
   proxy.ts                Runs before every request; keeps logins alive
 supabase/
   migrations/             SQL applied to Supabase, in order (0001 - 0011)
-  tests/                  99 checks that prove the rules above still hold
+  tests/                  100 checks that prove the rules above still hold
 scripts/
   seed.mts                Fills the database with demo data
   ai-backfill.mts         Reads and scores anything the AI hasn't seen yet
@@ -227,9 +227,8 @@ docs/
       write a vouch or decline
 - [x] **Step 7** — Employer flow: post a role, work the vouched candidate
       list, record a hire (which both sides must confirm)
-- [ ] **Step 9b** — Charging the fee when both sides confirm a hire, with the
-      rule that no payout releases against an unpaid fee. Built and tested
-      locally; migration 0011 not yet applied to the live database
+- [x] **Step 9b** — Charging the fee when both sides confirm a hire, with the
+      rule that no payout releases against an unpaid fee
 - [x] **Step 9a** — Employer payment methods: card or US bank account saved
       through Stripe's own hosted page. Built and tested against Stripe;
       waiting on migration 0010 to be applied before it can run end to end

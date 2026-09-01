@@ -116,7 +116,7 @@ src/
     stripe/{client,payment-methods}.ts
   proxy.ts               -- Next 16 renamed middleware.ts; exports proxy()
 supabase/migrations/     0001-0011
-supabase/tests/          00 stubs + 10..80, 99 checks
+supabase/tests/          00 stubs + 10..80, 100 checks
 scripts/                 seed.mts, ai-backfill.mts
 tests/                   7 browser tests (.mjs) + ai-layer.mts + stripe-9a.mts
 ```

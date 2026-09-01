@@ -69,7 +69,11 @@ set search_path = ''
 as $$
 begin
   if current_user in ('service_role', 'postgres') then
-    return new;
+    -- In a BEFORE DELETE trigger NEW is null, and returning null CANCELS the
+    -- delete. `return new` here silently suppressed every cascade — deleting a
+    -- company or an account left its charge rows behind as orphans, which
+    -- breaks the promise that deleting an account erases everything.
+    return case when tg_op = 'DELETE' then old else new end;
   end if;
   raise exception 'A charge is recorded by Vouch, not by the person paying it.'
     using errcode = 'insufficient_privilege';

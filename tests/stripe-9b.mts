@@ -148,7 +148,11 @@ async function main() {
 
   // --- 5. a declined card is recorded, not swallowed -----------------------
   console.log("\n5. When the card is declined");
-  const bad = await stripe.paymentMethods.create({ type: "card", card: { token: "tok_chargeDeclined" } });
+  // tok_chargeCustomerFail attaches to a customer happily and then fails when
+  // charged — which is the real-world case: a card that was fine when saved
+  // and declines weeks later when the fee falls due. tok_chargeDeclined is
+  // refused at attach time and never reaches a charge at all.
+  const bad = await stripe.paymentMethods.create({ type: "card", card: { token: "tok_chargeCustomerFail" } });
   await stripe.paymentMethods.attach(bad.id, { customer: customerId });
   await admin.from("companies").update({ default_payment_method_id: bad.id }).eq("id", companyId);
 
@@ -175,7 +179,15 @@ async function cleanup() {
     }
     for (const u of users) await admin.auth.admin.deleteUser(u).catch(() => {});
     const left = (await admin.from("companies").select("id").like("slug", "fee-test-%")).data ?? [];
-    console.log(`cleanup: ${left.length} test companies left, ${users.length} test logins removed\n`);
+    // Charges cascade with their company. If any survive, something is
+    // cancelling the cascade — which is exactly what a BEFORE DELETE trigger
+    // returning NEW does, and it orphans money rows silently.
+    const orphans = (await admin.from("employer_charges").select("id").eq("company_id", companyId)).data ?? [];
+    console.log(`cleanup: ${left.length} test companies left, ${orphans.length} orphaned charges, ${users.length} test logins removed\n`);
+    if (orphans.length > 0) {
+      console.error("PROBLEM: charge rows survived their company being deleted.");
+      process.exitCode = 1;
+    }
   } catch (e) {
     console.error("cleanup problem:", e instanceof Error ? e.message : e);
   }

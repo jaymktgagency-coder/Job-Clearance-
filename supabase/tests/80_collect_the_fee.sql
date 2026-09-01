@@ -231,6 +231,30 @@ begin
   raise notice 'PASS: a bank debit still in flight does not release a payout';
 end $$;
 
+-- --- 7. a charge still cascades away with what it belongs to ----------------
+-- The guard above fires on DELETE, and a BEFORE DELETE trigger that returns
+-- NEW returns null — which cancels the delete instead of allowing it. That
+-- silently orphaned every charge row when a company or an account was
+-- removed, and broke "deleting an account erases everything".
+do $$
+declare v_before int; v_after int; v_company uuid := 'cccc1111-0000-0000-0000-000000000001';
+begin
+  select count(*) into v_before from public.employer_charges where company_id = v_company;
+  if v_before = 0 then raise exception 'FAIL: fixture has no charges to cascade'; end if;
+
+  delete from public.voucher_profiles where company_id = v_company;   -- ON DELETE RESTRICT
+  delete from public.companies where id = v_company;
+
+  select count(*) into v_after from public.employer_charges where company_id = v_company;
+  if v_after <> 0 then
+    raise exception 'FAIL: % charge rows survived their company being deleted', v_after;
+  end if;
+  if exists (select 1 from public.companies where id = v_company) then
+    raise exception 'FAIL: the company itself was not deleted';
+  end if;
+  raise notice 'PASS: deleting the company took its % charge(s) with it — no orphaned money rows', v_before;
+end $$;
+
 drop table public.t_fee;
 
 do $$ begin raise notice '--- 80_collect_the_fee.sql: all checks passed ---'; end $$;

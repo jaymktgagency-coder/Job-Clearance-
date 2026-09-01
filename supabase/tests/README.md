@@ -40,6 +40,10 @@ They check, against a real Postgres database, that:
 - a bank debit still in flight does not count as money arrived
 - an employer cannot waive, delete, or mark their own fee paid — checked
   against BOTH locks, row-level security and the trigger behind it
+- deleting a company still takes its charge rows with it. A BEFORE DELETE
+  trigger that returns NEW returns null, which cancels the delete and orphans
+  the money row; this check fails against that version and passes against the
+  fixed one
 - a company cannot award itself a verification badge, at creation or after
 - a company may claim an email domain, but claiming proves nothing and
   unlocks nothing until Vouch marks it proven
@@ -73,7 +77,7 @@ psql -d yourtestdb -v ON_ERROR_STOP=1 \
   -f supabase/tests/80_collect_the_fee.sql
 ```
 
-All 99 checks print `PASS`, and the run ends with
+All 100 checks print `PASS`, and the run ends with
 `80_collect_the_fee.sql: all checks passed`. Any failure stops the
 run. `60_` builds its own company and people, so it also passes on its own.
 
