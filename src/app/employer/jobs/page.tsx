@@ -56,9 +56,14 @@ export default async function EmployerJobsPage() {
     <main className="mx-auto w-full max-w-2xl px-6 py-12">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-semibold tracking-tight">Your roles</h1>
-        <Button variant="ghost" size="sm" render={<Link href="/dashboard" />}>
-          Dashboard
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" render={<Link href="/employer/billing" />}>
+            Payment method
+          </Button>
+          <Button variant="ghost" size="sm" render={<Link href="/dashboard" />}>
+            Dashboard
+          </Button>
+        </div>
       </div>
       <p className="mt-2 text-muted-foreground">
         {company?.name} · you only ever see candidates someone has vouched for.

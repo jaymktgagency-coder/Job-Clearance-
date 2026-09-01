@@ -79,6 +79,27 @@ export const ENV_VARS: EnvVar[] = [
     requiredNow: false,
   },
   {
+    name: "STRIPE_SECRET_KEY",
+    description:
+      "Stripe's secret key, for saving an employer's payment method and later collecting the fee. NEVER share this. A key starting sk_test_ moves no real money.",
+    neededFor: "Step 9 - payments",
+    requiredNow: false,
+  },
+  {
+    name: "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+    description:
+      "Stripe's public key. Safe for the browser. Not used yet — the payment form is hosted by Stripe — but needed for card fields on this site later.",
+    neededFor: "Step 9 - payments",
+    requiredNow: false,
+  },
+  {
+    name: "STRIPE_WEBHOOK_SECRET",
+    description:
+      "Proves an incoming webhook really came from Stripe. Without it Vouch refuses them, because acting on an unverified one is how money goes missing.",
+    neededFor: "Step 9 - payments",
+    requiredNow: false,
+  },
+  {
     name: "NEXT_PUBLIC_SITE_URL",
     description:
       "Where the site lives. http://localhost:3000 on your laptop; your real domain once deployed.",

@@ -64,6 +64,8 @@ export async function sendCode(_prev: VerifyState, _formData: FormData): Promise
     .select("domain")
     .eq("company_id", ctx.profile.company_id)
     .eq("domain", domain)
+    // A domain a company merely claimed proves nothing about who works there.
+    .not("verified_at", "is", null)
     .maybeSingle();
 
   if (!owned) {

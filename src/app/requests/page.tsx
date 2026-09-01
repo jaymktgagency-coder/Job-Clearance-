@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { currentProfile } from "@/lib/auth";
 import { withdrawRequest, confirmHire } from "../jobs/actions";
+import { SeparationPanel, type SeparationHire } from "@/components/separation-panel";
 import { AiNotice } from "@/components/ai-notice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,19 @@ export default async function RequestsPage() {
     .select("id, start_date, confirmed_by_seeker_at, status, jobs(title), companies(name)")
     .is("confirmed_by_seeker_at", null);
 
+  // Jobs this person actually started. Either they or the employer may say one
+  // of them ended — and whether it did decides whether the person who vouched
+  // for them gets paid, so it is worth showing plainly.
+  const { data: started } = await supabase
+    .from("hires")
+    .select(`id, start_date, status, separated_at,
+             separation_reported_by, separation_reported_at, separation_claimed_date,
+             separation_confirmed_by_employer_at, separation_confirmed_by_seeker_at,
+             separation_disputed_at,
+             jobs(title), companies(name)`)
+    .eq("status", "confirmed")
+    .order("start_date", { ascending: false });
+
   return (
     <main className="mx-auto w-full max-w-2xl px-6 py-12">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -76,6 +90,30 @@ export default async function RequestsPage() {
               <p className="text-sm text-muted-foreground">
                 If this isn&apos;t right, don&apos;t confirm it — tell us instead.
               </p>
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      {(started ?? []).map((h) => {
+        const job = Array.isArray(h.jobs) ? h.jobs[0] : h.jobs;
+        const co = Array.isArray(h.companies) ? h.companies[0] : h.companies;
+        return (
+          <Card key={h.id as string} className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-base">
+                {job?.title} at {co?.name}
+              </CardTitle>
+              <CardDescription>
+                You started here on {h.start_date as string}.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SeparationPanel
+                hire={h as unknown as SeparationHire}
+                side="seeker"
+                otherParty={co?.name ?? "your employer"}
+              />
             </CardContent>
           </Card>
         );
