@@ -133,6 +133,23 @@ async function main() {
     // session that does not exist, which the handler skips over quietly.
     check("a correctly signed call is accepted", goodSig?.status === 200,
       goodSig ? `HTTP ${goodSig.status}` : "site not running");
+
+    // An event naming a customer Stripe no longer has must be acknowledged,
+    // not 500'd — a 500 makes Stripe redeliver the same dead event for days.
+    const ghost = JSON.stringify({
+      id: "evt_ghost", object: "event", type: "setup_intent.succeeded",
+      data: { object: { id: "seti_ghost", object: "setup_intent", customer: "cus_does_not_exist", payment_method: null } },
+    });
+    const ghostRes = await fetch(`${SITE}/api/stripe/webhook`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "stripe-signature": stripe.webhooks.generateTestHeaderString({ payload: ghost, secret: WHSEC }),
+      },
+      body: ghost,
+    }).catch(() => null);
+    check("an event naming a customer that no longer exists is acknowledged, not retried forever",
+      ghostRes?.status === 200, ghostRes ? `HTTP ${ghostRes.status}` : "site not running");
   } else {
     console.log("  SKIP  correctly signed call (no STRIPE_WEBHOOK_SECRET set)");
   }

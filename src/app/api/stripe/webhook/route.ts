@@ -37,9 +37,17 @@ async function companyIdFor(object: Stripe.Checkout.Session | Stripe.SetupIntent
   const customerId = typeof object.customer === "string" ? object.customer : object.customer?.id;
   if (!customerId) return null;
 
-  const customer = await stripe().customers.retrieve(customerId);
-  if (customer.deleted) return null;
-  return customer.metadata?.vouch_company_id ?? null;
+  try {
+    const customer = await stripe().customers.retrieve(customerId);
+    if (customer.deleted) return null;
+    return customer.metadata?.vouch_company_id ?? null;
+  } catch {
+    // The customer no longer exists at Stripe, or cannot be read. There is
+    // nothing to record and nothing to retry — returning null lets this
+    // event be acknowledged. Throwing would return 500 and Stripe would
+    // redeliver the same unresolvable event for days.
+    return null;
+  }
 }
 
 export async function POST(request: Request) {
