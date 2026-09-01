@@ -22,6 +22,7 @@ import {
   removePaymentMethod,
   saveDefaultPaymentMethod,
 } from "@/lib/stripe/payment-methods";
+import { collectFeeForHire } from "@/lib/stripe/charges";
 
 export type BillingState = { error: string | null; notice?: string | null };
 
@@ -153,4 +154,44 @@ export async function forgetPaymentMethod(): Promise<void> {
   revalidatePath("/employer/billing");
   revalidatePath("/dashboard");
   redirect("/employer/billing?removed=1");
+}
+
+/**
+ * "Try that fee again."
+ *
+ * Off-session card charges get declined for ordinary reasons — a card expired,
+ * the bank wanted a nudge, the limit was low that day. The employer fixes it
+ * and presses this. It cannot charge anything that is already settled, and it
+ * cannot charge a hire both sides have not confirmed; `collectFeeForHire`
+ * checks both before it talks to Stripe.
+ */
+export async function retryCharge(
+  _prev: BillingState,
+  formData: FormData,
+): Promise<BillingState> {
+  const hireId = String(formData.get("hire_id") ?? "");
+  if (!hireId) return { error: "We couldn't tell which fee that was." };
+
+  const ctx = await employerCompany();
+  if (!ctx) return { error: "You're not set up as an employer on any company." };
+
+  // Only ever retry a fee belonging to this employer's own company.
+  const supabase = await createClient();
+  const { data: owned } = await supabase
+    .from("employer_charges")
+    .select("id")
+    .eq("hire_id", hireId)
+    .eq("company_id", ctx.companyId)
+    .maybeSingle();
+
+  if (!owned) return { error: "That fee isn't one of yours." };
+
+  const result = await collectFeeForHire(hireId);
+  revalidatePath("/employer/billing");
+
+  if (result.status === "paid") return { error: null, notice: result.detail };
+  if (result.status === "processing") {
+    return { error: null, notice: "Sent. Bank payments take a few working days to clear." };
+  }
+  return { error: result.detail };
 }

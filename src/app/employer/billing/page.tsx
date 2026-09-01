@@ -23,6 +23,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChargeList, type ChargeRow } from "./ChargeList";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +101,31 @@ export default async function BillingPage(props: PageProps<"/employer/billing">)
 
   // Flag set, nothing behind it. Worth saying out loud rather than papering over.
   const flaggedButEmpty = !!company.payment_method_on_file && !details;
+
+  // What this company has been charged, and what it still owes.
+  const { data: chargeRows } = await supabase
+    .from("employer_charges")
+    .select(`hire_id, amount_cents, credit_applied_cents, net_amount_cents, status,
+             paid_at, last_error, hires(start_date, jobs(title))`)
+    .eq("company_id", membership!.company_id)
+    .order("created_at", { ascending: false });
+
+  const charges: ChargeRow[] = (chargeRows ?? []).map((c) => {
+    const hire = Array.isArray(c.hires) ? c.hires[0] : c.hires;
+    const job = hire ? (Array.isArray(hire.jobs) ? hire.jobs[0] : hire.jobs) : null;
+    return {
+      hire_id: c.hire_id as string,
+      amount_cents: c.amount_cents as number,
+      credit_applied_cents: c.credit_applied_cents as number,
+      net_amount_cents: c.net_amount_cents as number,
+      status: c.status as string,
+      paid_at: (c.paid_at as string) ?? null,
+      last_error: (c.last_error as string) ?? null,
+      role: (job?.title as string) ?? "A role",
+      startDate: (hire?.start_date as string) ?? "",
+    };
+  });
+  const owed = charges.filter((c) => c.status === "pending");
 
   return (
     <main className="mx-auto w-full max-w-2xl px-6 py-12">
@@ -215,6 +241,21 @@ export default async function BillingPage(props: PageProps<"/employer/billing">)
               </p>
             </form>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">
+            Fees{owed.length > 0 ? ` — ${owed.length} outstanding` : ""}
+          </CardTitle>
+          <CardDescription>
+            One fee per hire, and only once you and the person you hired have
+            both confirmed it.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChargeList charges={charges} />
         </CardContent>
       </Card>
 

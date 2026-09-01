@@ -9,8 +9,11 @@
 
 "use server";
 
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { stripeIsConfigured } from "@/lib/stripe/client";
+import { collectFeeForHire } from "@/lib/stripe/charges";
 
 export type RequestState = { error: string | null; notice?: string | null };
 
@@ -88,6 +91,17 @@ export async function confirmHire(formData: FormData): Promise<void> {
     .update({ confirmed_by_seeker_at: new Date().toISOString() })
     .eq("id", hireId)
     .eq("seeker_id", auth.user.id);
+
+  // This click is usually what turns a reported hire into a confirmed one,
+  // which is the moment the employer's fee becomes owed. Collect it after the
+  // response has gone back — the seeker is not the one paying and should not
+  // wait on a card, and a failed charge must never undo their confirmation.
+  if (stripeIsConfigured()) {
+    after(async () => {
+      const result = await collectFeeForHire(hireId);
+      console.log(`[stripe] fee for hire ${hireId}: ${result.status} — ${result.detail}`);
+    });
+  }
 
   revalidatePath("/requests");
 }

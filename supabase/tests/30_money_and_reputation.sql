@@ -111,6 +111,9 @@ begin
   raise notice 'PASS: the scheduled job held the payout instead of paying it';
 end $$;
 
+-- Identity and tax are only one of the gates. Since migration 0011 the
+-- employer's fee has to have arrived too, so clearing identity alone must
+-- still not release anything.
 do $$
 declare n int;
 begin
@@ -118,8 +121,22 @@ begin
    where user_id='22222222-2222-2222-2222-222222222222';
   update public.payouts set status='scheduled' where status='held';
   n := public.release_due_payouts();
+  if n <> 0 then raise exception 'FAIL: released % while the employer had not paid', n; end if;
+  if not exists (select 1 from public.payouts where status='held' and hold_reason like '%fee has not been collected%') then
+    raise exception 'FAIL: expected a hold explaining the unpaid fee';
+  end if;
+  raise notice 'PASS: identity done, but the fee had not arrived — still held';
+end $$;
+
+do $$
+declare n int;
+begin
+  -- The employer pays.
+  update public.employer_charges set status='paid', paid_at=now() where status='pending';
+  perform public.unhold_settled_payouts();
+  n := public.release_due_payouts();
   if n <> 1 then raise exception 'FAIL: expected 1 release, got %', n; end if;
-  raise notice 'PASS: once identity and tax are done, the payout releases';
+  raise notice 'PASS: identity done AND the fee collected — the payout releases';
 end $$;
 
 -- ===========================================================================
