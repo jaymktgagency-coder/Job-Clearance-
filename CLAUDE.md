@@ -107,13 +107,15 @@ src/
     profile/              jobs/[id]/    requests/     inbox/[id]/
     employer/jobs/[id]/   employer/billing/           api/stripe/webhook/
     terms/ privacy/ refunds/ support/   setup/
+    payouts/              -- the voucher's money, and the only screen that
+                             asks them for tax details
     hires/actions.ts      -- separation flow, shared by both sides
   components/  ai-notice, parsed-resume, separation-panel, site-footer, legal/, ui/
   lib/
     env.ts legal.ts auth.ts invites.ts email.ts email-domains.ts verification-codes.ts
     supabase/{client,server,health,db-status}.ts
     ai/{client,resume-file,parse-resume,score-fit,run}.ts
-    stripe/{client,payment-methods}.ts
+    stripe/{client,payment-methods,charges,connect}.ts
   proxy.ts               -- Next 16 renamed middleware.ts; exports proxy()
 supabase/migrations/     0001-0011
 supabase/tests/          00 stubs + 10..80, 100 checks
@@ -230,6 +232,25 @@ The webhook verifies the signature over the **raw body**, is safe to run twice,
 returns 200 for unhandled events, and **refuses everything with 503 if
 `STRIPE_WEBHOOK_SECRET` is missing** rather than trusting an unverified call.
 
+**Voucher payout onboarding is deferred on purpose** (9c). A voucher is asked
+for identity and tax details only once a vouch has become a confirmed hire and
+there is money with their name on it — never at signup, never to write a vouch.
+Nothing enforces this in code because nothing needs to: no route except
+`/payouts` ever asks, and it only asks when a payout row exists. The gates are
+`voucher_profiles.identity_verified_at` / `.tax_info_collected_at`, both
+platform-only, and the whole flow rests on `release_due_payouts()` **holding**
+rather than failing (`0011:131`) and `unhold_settled_payouts()` putting it back
+in the queue afterwards (`0011:186`).
+
+`recordAccountState()` in `stripe/connect.ts` is the single place that turns a
+Stripe account into those two gates: identity ← `payouts_enabled`, tax ←
+`details_submitted` with nothing tax-shaped left in `requirements`. **It works
+in both directions** — if Stripe later restricts the account, the identity gate
+shuts again and the money goes back to held. It writes only on a change, so the
+"verified at" date stays the day they verified instead of creeping forward on
+every `account.updated`. That event must be ticked on in the Stripe dashboard
+or a voucher's money sits held with nothing on screen to explain why.
+
 **This container:** the headless browser cannot reach external sites — only
 `curl` goes through the proxy. Google Fonts is blocked locally, so pages render
 in a serif fallback; that is cosmetic and fine on Vercel. Postgres in the
@@ -259,6 +280,8 @@ failures.
 npm run seed          # demo data; password for every demo login: vouch-demo-1234
 npm run test:ai       # 26 checks, real Anthropic calls, a few cents
 npm run test:stripe   # 15 checks, real Stripe test-mode calls, needs the site on :3000
+npm run test:9b       # 22 checks, collecting the fee
+npm run test:9c       # 27 checks, voucher payout onboarding
 npm run ai:backfill -- --dry-run
 ```
 
@@ -281,17 +304,27 @@ check is the only thing between Stripe's word and a stranger's.
 
 ## Current state
 
-Steps 1–8 built and live. Step 9 (payments) in progress: **9e** (departure
-flow) and **9a** (employer payment methods) are written and tested but
-**migrations 0009 and 0010 are not yet applied to the live database**, so
-neither can be merged to `main` or exercised end to end.
+Steps 1–8 built and live. Step 9 (payments): **9e** (departure flow), **9a**
+(employer payment methods) and **9b** (collecting the fee) are merged, with
+migrations 0009–0011 applied. **9c** (voucher payout onboarding) is written and
+needs `npm run test:9c` run against real Stripe test keys before merging — it
+adds no migration, so nothing has to be applied first.
 
 Still open, in rough priority order:
 
-- Apply 0009 + 0010, verify by attacking as a real user, then merge.
-- 9b charge on confirmed hire · 9c voucher Connect onboarding · 9d the
-  release job (Vercel Cron — **nothing runs on a schedule yet**, so
-  `release_at` passes and no code notices).
+- **9c has a known gap: nothing tells a voucher they have money waiting.** The
+  prompt is on the dashboard and `/payouts` only, so the 60-day head start it
+  is designed to give only applies to vouchers who happen to log in. A voucher
+  who doesn't log in first hears about it when the money is already due, which
+  is precisely the delay deferring onboarding was meant to avoid. The email at
+  hire confirmation is not a polish item — it is what makes the timing work.
+  Needs Resend switched on.
+- 9d the release job (Vercel Cron — **nothing runs on a schedule yet**, so
+  `release_at` passes and no code notices). `unhold_settled_payouts()` is
+  currently only ever called from `charges.ts` and `connect.ts`, so a payout
+  held for any other reason waits for a job that does not exist.
+- 9c stops at opening the gates. **No money is actually sent yet** — creating
+  the Stripe transfer at release is 9d's half.
 - **No admin screen exists anywhere.** `hire_status` has `disputed`,
   `abuse_flags` has a whole table, and there is no human queue for either.
 - Fill in `src/lib/legal.ts` — company name, address, support email are all

@@ -348,6 +348,51 @@ Vouch never receives a card number, a bank account number, or a CVC — those
 are typed on Stripe's own domain. What comes back is an identifier, a brand,
 and the last four digits. There is a test that asserts exactly this.
 
+### 9.5 Switch on paying the vouchers (Connect)
+
+The employer's side is money coming in. This is money going out, to the people
+who vouched. It needs one setting and one extra webhook event.
+
+1. In Stripe, open **Connect** in the left-hand menu and follow the prompts to
+   enable it. Pick **Express** accounts when asked, and **platform pays the
+   fees**. In test mode this is a couple of clicks and costs nothing.
+2. **Developers → Webhooks** → your `/api/stripe/webhook` endpoint → **Edit
+   events** → add **`account.updated`**. Save.
+
+That second step is the one that is easy to miss and hard to spot. Without it
+a voucher can finish their paperwork and Vouch never hears about it, so their
+money sits held forever with nothing on screen to explain why. If a voucher
+ever reports exactly that, check this first.
+
+### 9.6 Why a voucher is not asked for anything up front
+
+Writing a vouch requires no tax details, no Social Security number, no bank
+account. Most vouches never become a hire, and asking someone to file tax
+paperwork for money they may never earn is a good way to have them not bother.
+
+So the ask happens at the point a vouch turns into a confirmed hire — 60 days
+before the money is actually due, which leaves plenty of room for Stripe to
+check documents without holding anyone up. Until then `/payouts` says, in so
+many words, that there is nothing to set up.
+
+A voucher who never does it loses nothing: the payout is **held**, never
+cancelled, and it goes back in the queue the moment they finish.
+
+### 9.7 Try the voucher side
+
+You cannot fully complete Stripe's identity check with made-up details, and
+you do not need to. What you can see on the live site:
+
+- Sign in as a voucher who has no hires. Go to **/payouts**. It should say
+  *"Nothing to set up"* and ask you for nothing at all. That is the behaviour
+  worth protecting.
+- Sign in as a voucher who does have a confirmed hire (the demo data has one).
+  The dashboard shows a card headed *"$250 is waiting for you"*, and `/payouts`
+  offers a button through to Stripe.
+- Press it. You land on Stripe's own onboarding, on Stripe's domain. Come back
+  without finishing and nothing is lost — the button now says *"Finish setting
+  up payouts"*.
+
 ---
 
 ## Part 8 — Switch on the AI (optional)

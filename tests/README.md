@@ -85,6 +85,37 @@ It also asserts that what Stripe hands back to Vouch contains a brand and the
 last four digits and **no full card number and no CVC** — the test creates a
 real test card and greps the response for `4242424242424242`.
 
+## The payout test
+
+`stripe-9c.mts` covers the voucher's side of the money: setting up how they
+get paid, which they are only ever asked to do after a vouch has turned into
+a hire.
+
+```bash
+npm run test:9c
+```
+
+27 checks. The first one is the one to protect: **signed in as the actual
+voucher with the publishable key**, it tries to set its own
+`identity_verified_at` and `tax_info_collected_at` and asserts the database
+refuses. Running that as `postgres` or with the secret key would prove nothing
+— the guard deliberately trusts both, so the test would pass while the hole
+was wide open.
+
+The rest: an Express account is created once and not twice; a half-finished
+onboarding opens neither gate; a finished one opens both; Stripe sending the
+same update again does not move the verification date; and — the one that is
+easy to leave out — **an account Stripe later restricts closes the identity
+gate again**, so money never moves to an account Stripe has stopped trusting.
+
+It ends with a real payout: held for "waiting on identity and tax", then back
+in the queue and released once the details arrive.
+
+Account creation is a real call to Stripe. The onboarding stages are
+hand-built account objects, because there is no way to walk a person through
+Stripe's hosted onboarding from a script — and a script that only tested the
+happy path would never reach the restricted case at all.
+
 ## Note on email confirmation
 
 `invite-flow.mjs` and `onboarding-paths.mjs` create their test accounts through

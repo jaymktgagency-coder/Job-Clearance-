@@ -91,6 +91,11 @@ export function VouchForm({
           earn <strong className="text-foreground">{earns}</strong> if they&apos;re
           hired and stay 60 days. Paid endorsements only work when everyone knows
           they&apos;re paid.
+          <p className="mt-2">
+            You don&apos;t need to give us any tax or payment details to vouch. We
+            only ask for those if this turns into a hire and there&apos;s money to
+            send you.
+          </p>
         </div>
 
         <Button type="submit" disabled={pending}>

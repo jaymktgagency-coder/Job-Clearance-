@@ -25,6 +25,8 @@ const TIER_LABEL: Record<string, string> = {
   none: "Not verified yet",
 };
 
+const money = (cents: number) => `$${(cents / 100).toLocaleString()}`;
+
 export default async function DashboardPage() {
   const user = await currentUser();
   if (!user) redirect("/login");
@@ -127,7 +129,8 @@ export default async function DashboardPage() {
   async function VoucherView() {
     const { data: vp } = await supabase
       .from("voucher_profiles")
-      .select("status, verification_method, job_title, companies(name), locations(label)")
+      .select(`status, verification_method, job_title, identity_verified_at,
+               tax_info_collected_at, companies(name), locations(label)`)
       .maybeSingle();
 
     const company = Array.isArray(vp?.companies) ? vp?.companies[0] : vp?.companies;
@@ -146,6 +149,19 @@ export default async function DashboardPage() {
       .from("voucher_reputation")
       .select("vouches_written, hires_resulting, hires_measured, retention_pct")
       .maybeSingle();
+
+    // Money with their name on it that has not been sent yet. This is the
+    // only thing that makes us ask a voucher for tax details at all — no
+    // payout coming, no ask. See /payouts and lib/stripe/connect.ts.
+    const { data: coming } = await supabase
+      .from("payouts")
+      .select("amount_cents, release_at")
+      .in("status", ["scheduled", "held"])
+      .order("release_at", { ascending: true });
+
+    const owed = (coming ?? []).reduce((sum, p) => sum + (p.amount_cents as number), 0);
+    const payoutSetupDone = Boolean(vp?.identity_verified_at && vp?.tax_info_collected_at);
+    const needsPayoutSetup = (coming ?? []).length > 0 && !payoutSetupDone;
 
     return (
       <div className="mt-8 space-y-4">
@@ -185,6 +201,43 @@ export default async function DashboardPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Only ever shown to a voucher who has actually earned something.
+            A voucher with no payout coming sees nothing here and is asked
+            for nothing — that is the whole point of leaving this until now. */}
+        {needsPayoutSetup ? (
+          <Card className="border-foreground/20">
+            <CardHeader>
+              <CardTitle className="text-base">{money(owed)} is waiting for you</CardTitle>
+              <CardDescription>We need your details before we can send it</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <p>
+                Someone you vouched for was hired. To pay you we need to know who
+                you are and have your tax details — that is the law for anyone
+                paying you, not a Vouch rule. It takes about five minutes, on
+                Stripe&apos;s own site rather than this one.
+              </p>
+              <Button size="sm" render={<Link href="/payouts" />}>
+                Set up getting paid
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {(coming ?? []).length > 0 && payoutSetupDone ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">{money(owed)} on its way</CardTitle>
+              <CardDescription>Nothing for you to do</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              <Button size="sm" variant="outline" render={<Link href="/payouts" />}>
+                See what you&apos;re owed
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Card>

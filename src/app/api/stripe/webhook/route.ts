@@ -23,6 +23,7 @@ import type Stripe from "stripe";
 import { stripe, stripeIsConfigured } from "@/lib/stripe/client";
 import { saveDefaultPaymentMethod } from "@/lib/stripe/payment-methods";
 import { recordIntentOutcome } from "@/lib/stripe/charges";
+import { handleAccountUpdated } from "@/lib/stripe/connect";
 
 // Webhooks are never prerendered and never cached.
 export const dynamic = "force-dynamic";
@@ -127,6 +128,25 @@ export async function POST(request: Request) {
         const intent = event.data.object as Stripe.PaymentIntent;
         const outcome = await recordIntentOutcome(intent);
         console.log(`[stripe] ${event.type}: ${outcome}`);
+        break;
+      }
+
+      // A voucher finished (or changed) their payout setup at Stripe.
+      //
+      // This is the event that makes deferred onboarding work. A voucher is
+      // asked for tax and identity details only once they have money coming,
+      // which can be long after they wrote the vouch — so the answer arrives
+      // here, whenever they get round to it, and whatever was held waiting on
+      // it goes back in the queue.
+      //
+      // It also fires when Stripe RESTRICTS an account: a document expired, a
+      // requirement re-opened. handleAccountUpdated closes the identity gate
+      // again in that case, so we never pay into an account Stripe has
+      // stopped trusting.
+      case "account.updated": {
+        const account = event.data.object as Stripe.Account;
+        const outcome = await handleAccountUpdated(account);
+        console.log(`[stripe] account.updated: ${outcome}`);
         break;
       }
 
