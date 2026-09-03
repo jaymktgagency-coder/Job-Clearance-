@@ -14,6 +14,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { stripeIsConfigured } from "@/lib/stripe/client";
 import { collectFeeForHire } from "@/lib/stripe/charges";
+import { notifyVoucherOfPayout } from "@/lib/payout-emails";
 
 export type RequestState = { error: string | null; notice?: string | null };
 
@@ -102,6 +103,18 @@ export async function confirmHire(formData: FormData): Promise<void> {
       console.log(`[stripe] fee for hire ${hireId}: ${result.status} — ${result.detail}`);
     });
   }
+
+  // The same click starts the voucher's 60-day clock, so this is where they
+  // find out they have money coming and what they need to do about it.
+  //
+  // Deliberately NOT inside the Stripe check above, and in its own after()
+  // block: the payout row is raised by the database whether or not Stripe is
+  // switched on, and a fee that fails to collect must not also cost the
+  // voucher the head start this email exists to give them. The two are
+  // independent, so a failure in one cannot take the other down.
+  after(async () => {
+    console.log(`[payouts] ${await notifyVoucherOfPayout(hireId)}`);
+  });
 
   revalidatePath("/requests");
 }

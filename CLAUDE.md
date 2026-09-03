@@ -79,6 +79,8 @@ Every number lives in `platform_settings`, never in code. Current values:
 | `max_open_vouches_per_voucher` | 5 | |
 | `min_vouch_body_chars` | 200 | DB hard floor is 150 |
 | `min_hires_for_retention_pct` | 5 | Below this, show counts not a percentage |
+| `payout_reminder_days` | `[30, 14, 3]` | Days before release a voucher who still hasn't set up payouts is reminded. `[]` turns reminders off |
+| `payout_reminder_min_hours_apart` | 48 | Two reminders never land closer than this, whatever the milestones say |
 
 Rules that follow from this:
 
@@ -113,11 +115,12 @@ src/
   components/  ai-notice, parsed-resume, separation-panel, site-footer, legal/, ui/
   lib/
     env.ts legal.ts auth.ts invites.ts email.ts email-domains.ts verification-codes.ts
+    payout-emails.ts       -- what a voucher is told about money they've earned
     supabase/{client,server,health,db-status}.ts
     ai/{client,resume-file,parse-resume,score-fit,run}.ts
     stripe/{client,payment-methods,charges,connect}.ts
   proxy.ts               -- Next 16 renamed middleware.ts; exports proxy()
-supabase/migrations/     0001-0011
+supabase/migrations/     0001-0012
 supabase/tests/          00 stubs + 10..80, 100 checks
 scripts/                 seed.mts, ai-backfill.mts
 tests/                   7 browser tests (.mjs) + ai-layer.mts + stripe-9a.mts
@@ -251,6 +254,26 @@ shuts again and the money goes back to held. It writes only on a change, so the
 every `account.updated`. That event must be ticked on in the Stripe dashboard
 or a voucher's money sits held with nothing on screen to explain why.
 
+**Telling the voucher is half of deferring the paperwork** (0012). Deferring
+the ask only buys a head start if the voucher hears about it on the day the
+clock starts, so `notifyVoucherOfPayout()` sends one email per payout from the
+`after()` block in `confirmHire` — the same click that raises the payout row.
+It sits **outside** the `stripeIsConfigured()` guard and in its own `after()`:
+the payout row exists whether or not Stripe is on, and a fee that fails to
+collect must not also cost the voucher their run-up.
+
+`payouts.voucher_notified_at` is stamped **only on `delivered: true`**. With no
+`RESEND_API_KEY`, `sendEmail()` logs and reports `delivered: false`; stamping on
+that would mark a whole cohort "told" and never tell them. Send first, stamp
+second, guarded with `.is("voucher_notified_at", null)`. The three new columns
+need no guard trigger — `payouts` has **no UPDATE policies at all**, so they are
+platform-only by construction, and `guard_payout_release()` returns early unless
+the status is moving to `released`/`paid`.
+
+Reminders key off `last_reminder_days_out` — the **milestone** last sent, not a
+count — so a missed scheduled run skips the stale reminders instead of firing
+all three at once.
+
 **This container:** the headless browser cannot reach external sites — only
 `curl` goes through the proxy. Google Fonts is blocked locally, so pages render
 in a serif fallback; that is cosmetic and fine on Vercel. Postgres in the
@@ -273,6 +296,7 @@ failures.
 | `0009_separation_and_hire_integrity.sql` | departure flow; each side writes only its own half; credits lapse |
 | `0010_payment_methods_and_company_trust.sql` | Stripe columns; badges and domain claims are platform-only |
 | `0011_collect_the_fee.sql` | Collect the fee off-session; **no payout releases against an unpaid charge** |
+| `0012_telling_the_voucher.sql` | Three nullable columns recording what a voucher has been told; the reminder cadence as a setting; `platform_setting_int_array()` |
 
 ## Testing
 
@@ -312,13 +336,18 @@ adds no migration, so nothing has to be applied first.
 
 Still open, in rough priority order:
 
-- **9c has a known gap: nothing tells a voucher they have money waiting.** The
-  prompt is on the dashboard and `/payouts` only, so the 60-day head start it
-  is designed to give only applies to vouchers who happen to log in. A voucher
-  who doesn't log in first hears about it when the money is already due, which
-  is precisely the delay deferring onboarding was meant to avoid. The email at
-  hire confirmation is not a polish item — it is what makes the timing work.
-  Needs Resend switched on.
+- **The initial payout email is written (0012) but reminders are not.** The
+  "you earned this" email now goes out from `confirmHire`, in both a
+  needs-setup and an already-set-up version. The reminder cadence
+  (`payout_reminder_days`, 30/14/3 days out) has its schema, its settings and
+  its index, but **nothing sends them yet** — that is the same missing cron as
+  9d. Vouchers who ignore the first email currently hear nothing more.
+- **Nothing has been emailed to anyone yet.** `RESEND_API_KEY` is unconfirmed
+  on Vercel; until it is set, `sendEmail()` writes to the function log and
+  reports `delivered: false`, so `voucher_notified_at` stays null and those
+  payouts are picked up once Resend is on. Check with `vercel env ls`.
+- **A voucher whose money is already overdue gets no further email.** The
+  milestones stop at 3 days out by design. The `/payouts` card still shows it.
 - 9d the release job (Vercel Cron — **nothing runs on a schedule yet**, so
   `release_at` passes and no code notices). `unhold_settled_payouts()` is
   currently only ever called from `charges.ts` and `connect.ts`, so a payout
