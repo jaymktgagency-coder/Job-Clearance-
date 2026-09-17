@@ -215,6 +215,12 @@ function. A non-async helper there is a build error (this bit once —
 
 **shadcn/ui here is Base UI**: use `render={<Link href="..." />}`, not `asChild`.
 
+**The look lives in `DESIGN.md`, and colours live only in `globals.css`.**
+Orange and white, warm neutrals, three motion curves, no hard-coded colour
+anywhere else. The one rule worth knowing before touching a screen: orange as
+a *surface* carries near-black text (7.0:1), orange as *text* is always the
+darker `--brand-700` (5.8:1). White on bright orange is 2.6:1 and fails.
+
 **Supabase gotchas:** errors are plain objects, not `Error` — check
 `"message" in error`. `head: true` returns 204 with a null count on a missing
 table; use `.select("id", { count: "exact" }).limit(1)`. Uploading a `Blob`
