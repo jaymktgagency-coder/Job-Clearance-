@@ -132,12 +132,34 @@
     0 16px 32px rgb(var(--shadow-rgb) / 0.12);
   --shadow-xl: 0 8px 16px rgb(var(--shadow-rgb) / 0.08),
     0 28px 56px rgb(var(--shadow-rgb) / 0.16);
+  /* RAISED surfaces: a lit top edge plus a shadow below, in one declaration.
+     The inset highlight is what turns a rectangle into an object with a top.
+     Baked into the same token so nobody can ship half of the effect. */
+  --shadow-raised: inset 0 1px 0 0 var(--keyline),
+    0 1px 2px rgb(var(--shadow-rgb) / 0.06),
+    0 2px 6px rgb(var(--shadow-rgb) / 0.07);
+  --shadow-raised-md: inset 0 1px 0 0 var(--keyline),
+    0 2px 4px rgb(var(--shadow-rgb) / 0.06),
+    0 8px 18px rgb(var(--shadow-rgb) / 0.1);
+  --shadow-raised-lg: inset 0 1px 0 0 var(--keyline),
+    0 4px 8px rgb(var(--shadow-rgb) / 0.07),
+    0 18px 36px rgb(var(--shadow-rgb) / 0.13);
+
   /* The orange glow under a primary button. Tinted with the brand hue so it
-     looks like the button is actually lit, not just floating. */
-  --shadow-brand: 0 2px 4px rgb(var(--brand-rgb) / 0.24),
-    0 8px 20px rgb(var(--brand-rgb) / 0.3);
-  --shadow-brand-lg: 0 4px 8px rgb(var(--brand-rgb) / 0.26),
-    0 16px 36px rgb(var(--brand-rgb) / 0.34);
+     looks like the button is actually lit, not just floating, and carrying
+     its own white top edge. */
+  --shadow-brand: inset 0 1px 0 0 rgb(255 255 255 / 0.32),
+    0 1px 2px rgb(var(--brand-rgb) / 0.3),
+    0 4px 12px rgb(var(--brand-rgb) / 0.32);
+  --shadow-brand-lg: inset 0 1px 0 0 rgb(255 255 255 / 0.38),
+    0 3px 6px rgb(var(--brand-rgb) / 0.32),
+    0 12px 28px rgb(var(--brand-rgb) / 0.4);
+
+  /* SUNKEN surfaces: the opposite trick. A shadow cast INWARD from the top
+     edge, so a text field reads as a well cut into the page rather than a
+     box sitting on it. Buttons come toward you, inputs go away from you. */
+  --shadow-inset: inset 0 1px 2px rgb(var(--shadow-rgb) / 0.08),
+    inset 0 0 0 1px rgb(var(--shadow-rgb) / 0.02);
 }
 
 :root {
@@ -199,8 +221,11 @@
   --destructive: oklch(0.505 0.215 22);
   --destructive-foreground: oklch(0.99 0.005 60);
 
-  /* Green for the good news: a vouch accepted, a payout released. */
-  --success: oklch(0.52 0.135 152);
+  /* Green for the good news: a vouch accepted, a payout released. Darker
+     than green usually wants to be, because it has to stay readable as text
+     sitting on a pale tint of itself — the lighter draft measured 4.2:1
+     against that tint and failed. */
+  --success: oklch(0.46 0.135 152);
   --success-foreground: oklch(0.99 0.005 60);
 
   --border: oklch(0.905 0.012 60);
