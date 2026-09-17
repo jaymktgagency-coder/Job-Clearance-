@@ -12,6 +12,7 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ArrowLeftIcon, ShieldCheckIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { currentProfile } from "@/lib/auth";
 import { stripeIsConfigured, stripeIsTestMode } from "@/lib/stripe/client";
@@ -20,10 +21,13 @@ import {
   forgetPaymentMethod,
   startPaymentMethodSetup,
 } from "./actions";
+import { AppHeader } from "@/components/app-header";
+import { StatusLine } from "@/components/status-mark";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChargeList, type ChargeRow } from "./ChargeList";
+import { FormError } from "@/components/form-message";
 
 export const dynamic = "force-dynamic";
 
@@ -61,20 +65,27 @@ export default async function BillingPage(props: PageProps<"/employer/billing">)
   // usual cause is this site running ahead of its database migrations.
   if (companyError) {
     return (
-      <main className="mx-auto w-full max-w-2xl px-6 py-12">
-        <Button variant="ghost" size="sm" render={<Link href="/employer/jobs" />}>
-          ← Your roles
-        </Button>
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight">Payment method</h1>
-        <p role="alert" className="mt-6 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          This screen isn&apos;t ready yet on this site — its database is missing the
-          payment columns. Nothing is wrong with your account, and nothing you do
-          elsewhere on Vouch is affected. Tell us and we&apos;ll sort it out.
-        </p>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Technical detail, in case it helps: {companyError.message}
-        </p>
-      </main>
+      <>
+        <AppHeader profile={profile} />
+        <main className="mx-auto w-full max-w-2xl px-6 py-10 sm:py-14">
+          <Button variant="ghost" size="sm" render={<Link href="/employer/jobs" />}>
+            <ArrowLeftIcon aria-hidden="true" />
+            Your roles
+          </Button>
+          <h1 className="mt-5 text-3xl font-semibold sm:text-4xl">
+            Payment method
+          </h1>
+          <FormError className="mt-6">
+            This screen isn&apos;t ready yet on this site — its database is
+            missing the payment columns. Nothing is wrong with your account, and
+            nothing you do elsewhere on Vouch is affected. Tell us and
+            we&apos;ll sort it out.
+          </FormError>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Technical detail, in case it helps: {companyError.message}
+          </p>
+        </main>
+      </>
     );
   }
 
@@ -128,64 +139,81 @@ export default async function BillingPage(props: PageProps<"/employer/billing">)
   const owed = charges.filter((c) => c.status === "pending");
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-12">
+    <>
+      <AppHeader profile={profile} />
+
+      <main className="mx-auto w-full max-w-2xl px-6 py-10 sm:py-14">
       <Button variant="ghost" size="sm" render={<Link href="/employer/jobs" />}>
-        ← Your roles
+        <ArrowLeftIcon aria-hidden="true" />
+        Your roles
       </Button>
 
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight">Payment method</h1>
-      <p className="mt-2 text-muted-foreground">
-        {company.name as string}
-      </p>
+      <h1 className="mt-5 text-3xl font-semibold sm:text-4xl">Payment method</h1>
+      <p className="mt-2 text-muted-foreground">{company.name as string}</p>
 
-      {/* Say the quiet part first. */}
-      <div className="mt-6 rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-        <strong className="font-medium text-foreground">Nothing is charged here.</strong>{" "}
-        There is no subscription and no listing fee. A card or bank account on
-        file is only ever charged when you confirm you&apos;ve hired someone — and
-        the person you hired has to confirm it too.
+      {/* Say the quiet part first. "Add a payment method" on a hiring site is
+          exactly when a small business gets suspicious, and they are right to
+          be — so this is the first thing on the page, not a footnote. */}
+      <div className="mt-6 rounded-lg bg-brand-50 p-4 text-sm text-brand-900">
+        <strong className="font-semibold">Nothing is charged here.</strong> There
+        is no subscription and no listing fee. A card or bank account on file is
+        only ever charged when you confirm you&apos;ve hired someone — and the
+        person you hired has to confirm it too.
       </div>
 
       {stripeIsConfigured() && stripeIsTestMode() ? (
-        <p className="mt-3 rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
-          <strong className="font-medium text-foreground">Test mode.</strong> No real
-          money can move. Use card <code>4242 4242 4242 4242</code>, any future
-          expiry, any CVC.
+        <p className="mt-3 rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+          <strong className="font-semibold text-foreground">Test mode.</strong> No
+          real money can move. Use card{" "}
+          <code className="tabular font-mono select-all">
+            4242 4242 4242 4242
+          </code>
+          , any future expiry, any CVC.
         </p>
       ) : null}
 
       {result?.notice ? (
-        <p role="status" className="mt-3 rounded-md border px-3 py-2 text-sm">
+        <p
+          role="status"
+          className="mt-3 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
+        >
           {result.notice}
         </p>
       ) : null}
-      {result?.error ? (
-        <p role="alert" className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {result.error}
-        </p>
-      ) : null}
+      {result?.error ? <FormError className="mt-3">{result.error}</FormError> : null}
       {params.cancelled ? (
-        <p role="status" className="mt-3 rounded-md border px-3 py-2 text-sm text-muted-foreground">
-          No problem — nothing was saved. You can do this any time before you hire someone.
+        <p
+          role="status"
+          className="mt-3 rounded-lg bg-sunken px-4 py-3 text-sm text-muted-foreground"
+        >
+          No problem — nothing was saved. You can do this any time before you
+          hire someone.
         </p>
       ) : null}
       {params.removed ? (
-        <p role="status" className="mt-3 rounded-md border px-3 py-2 text-sm text-muted-foreground">
+        <p
+          role="status"
+          className="mt-3 rounded-lg bg-sunken px-4 py-3 text-sm text-muted-foreground"
+        >
           Removed. Stripe no longer holds those details for you.
         </p>
       ) : null}
       {params.error ? (
-        <p role="alert" className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <FormError className="mt-3">
           {params.error === "off"
             ? "Payments aren't switched on yet on this site."
             : "We couldn't reach Stripe just then. Nothing was saved — please try again."}
-        </p>
+        </FormError>
       ) : null}
 
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle className="text-base">
-            {details ? "On file" : flaggedButEmpty ? "Needs re-adding" : "Nothing on file yet"}
+          <CardTitle>
+            {details
+              ? "On file"
+              : flaggedButEmpty
+                ? "Needs re-adding"
+                : "Nothing on file yet"}
           </CardTitle>
           <CardDescription>
             {details
@@ -198,11 +226,12 @@ export default async function BillingPage(props: PageProps<"/employer/billing">)
         <CardContent className="space-y-4 text-sm">
           {details ? (
             <>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium">
-                  {details.label} ending {details.last4}
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="font-semibold">
+                  {details.label} ending{" "}
+                  <span className="tabular">{details.last4}</span>
                 </span>
-                <Badge variant="secondary">
+                <Badge variant="soft">
                   {details.type === "us_bank_account" ? "Bank account" : "Card"}
                 </Badge>
               </div>
@@ -217,7 +246,7 @@ export default async function BillingPage(props: PageProps<"/employer/billing">)
                   about $5 rather than $58.
                 </p>
               )}
-              <div className="flex flex-wrap gap-2 border-t pt-4">
+              <div className="flex flex-wrap gap-2 border-t border-border pt-4">
                 <form action={startPaymentMethodSetup}>
                   <Button type="submit" size="sm" variant="outline">
                     Replace it
@@ -232,10 +261,12 @@ export default async function BillingPage(props: PageProps<"/employer/billing">)
             </>
           ) : (
             <form action={startPaymentMethodSetup}>
-              <Button type="submit" disabled={!stripeIsConfigured()}>
-                {flaggedButEmpty ? "Add a card or bank account again" : "Add a card or bank account"}
+              <Button type="submit" size="lg" disabled={!stripeIsConfigured()}>
+                {flaggedButEmpty
+                  ? "Add a card or bank account again"
+                  : "Add a card or bank account"}
               </Button>
-              <p className="mt-2 text-muted-foreground">
+              <p className="mt-3 text-muted-foreground">
                 You&apos;ll enter your details on Stripe&apos;s own site, not ours. Vouch
                 never sees the number.
               </p>
@@ -246,8 +277,11 @@ export default async function BillingPage(props: PageProps<"/employer/billing">)
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-base">
-            Fees{owed.length > 0 ? ` — ${owed.length} outstanding` : ""}
+          <CardTitle className="flex flex-wrap items-center gap-2.5">
+            Fees
+            {owed.length > 0 ? (
+              <Badge variant="soft">{owed.length} outstanding</Badge>
+            ) : null}
           </CardTitle>
           <CardDescription>
             One fee per hire, and only once you and the person you hired have
@@ -261,25 +295,36 @@ export default async function BillingPage(props: PageProps<"/employer/billing">)
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-base">Your verification</CardTitle>
+          <CardTitle>Your verification</CardTitle>
           <CardDescription>
             What job seekers and vouchers see next to your roles.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p>
-            <Badge variant={company.verification_tier === "none" ? "outline" : "secondary"}>
-              {TIER_LABEL[company.verification_tier as string] ?? "Not verified yet"}
-            </Badge>
-          </p>
-          <ul className="mt-2 space-y-1 text-muted-foreground">
-            <li>{company.payment_method_on_file ? "✓" : "○"} Payment method on file</li>
-            <li>
-              {company.business_registration_verified_at ? "✓" : "○"} Business
-              registration checked by Vouch
-            </li>
-          </ul>
-          <p className="text-muted-foreground">
+        <CardContent className="space-y-4 text-sm">
+          <Badge
+            variant={company.verification_tier === "none" ? "soft" : "default"}
+          >
+            <ShieldCheckIcon aria-hidden="true" />
+            {TIER_LABEL[company.verification_tier as string] ??
+              "Not verified yet"}
+          </Badge>
+
+          <div className="space-y-2.5">
+            <StatusLine
+              state={company.payment_method_on_file ? "done" : "waiting"}
+            >
+              Payment method on file
+            </StatusLine>
+            <StatusLine
+              state={
+                company.business_registration_verified_at ? "done" : "waiting"
+              }
+            >
+              Business registration checked by Vouch
+            </StatusLine>
+          </div>
+
+          <p className="measure text-muted-foreground">
             A business running on a free email address can earn Verified Business
             just like anyone else. Verified Domain needs a company email domain
             we&apos;ve checked — it&apos;s not a better badge, it just also lets your
@@ -287,6 +332,7 @@ export default async function BillingPage(props: PageProps<"/employer/billing">)
           </p>
         </CardContent>
       </Card>
-    </main>
+      </main>
+    </>
   );
 }

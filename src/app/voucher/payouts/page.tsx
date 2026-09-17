@@ -9,11 +9,14 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ArrowLeftIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { currentProfile } from "@/lib/auth";
 import { stripeIsConfigured, stripeIsTestMode } from "@/lib/stripe/client";
 import { payoutAccountState } from "@/lib/stripe/connect";
 import { refreshPayoutAccount, startPayoutOnboarding } from "./actions";
+import { AppHeader } from "@/components/app-header";
+import { FormError } from "@/components/form-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,12 +26,31 @@ export const dynamic = "force-dynamic";
 const money = (cents: number) => `$${(cents / 100).toLocaleString()}`;
 
 /** What each payout state means to the person waiting for the money. */
-const EXPLAIN: Record<string, { label: string; tone: "default" | "secondary" | "outline"; line: string }> = {
-  scheduled: { label: "On the way", tone: "outline", line: "Waiting out the 60 days from their start date." },
-  held: { label: "Held", tone: "outline", line: "Something needs sorting before this can be paid." },
-  released: { label: "Approved", tone: "secondary", line: "Cleared to pay. It'll be sent shortly." },
-  paid: { label: "Paid", tone: "secondary", line: "Sent to your account." },
-  cancelled: { label: "Not payable", tone: "outline", line: "The person left before the 60 days were up." },
+const EXPLAIN: Record<
+  string,
+  { label: string; tone: "success" | "soft" | "outline"; line: string }
+> = {
+  scheduled: {
+    label: "On the way",
+    tone: "soft",
+    line: "Waiting out the 60 days from their start date.",
+  },
+  held: {
+    label: "Held",
+    tone: "outline",
+    line: "Something needs sorting before this can be paid.",
+  },
+  released: {
+    label: "Approved",
+    tone: "success",
+    line: "Cleared to pay. It'll be sent shortly.",
+  },
+  paid: { label: "Paid", tone: "success", line: "Sent to your account." },
+  cancelled: {
+    label: "Not payable",
+    tone: "outline",
+    line: "The person left before the 60 days were up.",
+  },
 };
 
 export default async function VoucherPayoutsPage(props: PageProps<"/voucher/payouts">) {
@@ -57,47 +79,55 @@ export default async function VoucherPayoutsPage(props: PageProps<"/voucher/payo
     .reduce((n, p) => n + (p.amount_cents as number), 0);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-12">
+    <>
+      <AppHeader profile={profile} />
+
+      <main className="mx-auto w-full max-w-2xl px-6 py-10 sm:py-14">
       <Button variant="ghost" size="sm" render={<Link href="/dashboard" />}>
-        ← Dashboard
+        <ArrowLeftIcon aria-hidden="true" />
+        Dashboard
       </Button>
 
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight">Getting paid</h1>
-      <p className="mt-2 text-muted-foreground">
+      <h1 className="mt-5 text-3xl font-semibold sm:text-4xl">Getting paid</h1>
+      <p className="measure mt-3 text-lg text-muted-foreground">
         You earn half the fee when someone you vouched for is hired. It&apos;s
         released 60 days after they start — and if they leave before then, it
         isn&apos;t paid at all. That delay is what makes a vouch worth something.
       </p>
 
       {stripeIsConfigured() && stripeIsTestMode() ? (
-        <p className="mt-3 rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
-          <strong className="font-medium text-foreground">Test mode.</strong> No real
-          money moves, and any details entered go to Stripe&apos;s test system.
+        <p className="mt-4 rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+          <strong className="font-semibold text-foreground">Test mode.</strong> No
+          real money moves, and any details entered go to Stripe&apos;s test
+          system.
         </p>
       ) : null}
 
       {refreshed?.notice ? (
-        <p role="status" className="mt-3 rounded-md border px-3 py-2 text-sm">{refreshed.notice}</p>
-      ) : null}
-      {refreshed?.error ? (
-        <p role="alert" className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {refreshed.error}
+        <p
+          role="status"
+          className="mt-4 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
+        >
+          {refreshed.notice}
         </p>
       ) : null}
+      {refreshed?.error ? (
+        <FormError className="mt-4">{refreshed.error}</FormError>
+      ) : null}
       {params.error ? (
-        <p role="alert" className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <FormError className="mt-4">
           {params.error === "off"
             ? "Payouts aren't switched on yet on this site."
             : "We couldn't reach Stripe just then. Nothing was lost — please try again."}
-        </p>
+        </FormError>
       ) : null}
 
       {/* Where the money goes. */}
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+          <CardTitle className="flex flex-wrap items-center gap-2.5">
             Your payout account
-            <Badge variant={account.status === "active" ? "secondary" : "outline"}>
+            <Badge variant={account.status === "active" ? "success" : "soft"}>
               {account.status === "active"
                 ? "Ready"
                 : account.status === "restricted"
@@ -127,8 +157,8 @@ export default async function VoucherPayoutsPage(props: PageProps<"/voucher/payo
               </p>
               {account.outstanding.length > 0 ? (
                 <div>
-                  <p className="font-medium">Still needed:</p>
-                  <ul className="mt-1 list-disc pl-5 text-muted-foreground">
+                  <p className="font-semibold">Still needed:</p>
+                  <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-muted-foreground">
                     {account.outstanding.map((r) => (
                       <li key={r}>{r}</li>
                     ))}
@@ -136,11 +166,13 @@ export default async function VoucherPayoutsPage(props: PageProps<"/voucher/payo
                 </div>
               ) : null}
               <form action={startPayoutOnboarding}>
-                <Button type="submit" disabled={!stripeIsConfigured()}>
-                  {account.status === "none" ? "Set up payouts" : "Finish setting up payouts"}
+                <Button type="submit" size="lg" disabled={!stripeIsConfigured()}>
+                  {account.status === "none"
+                    ? "Set up payouts"
+                    : "Finish setting up payouts"}
                 </Button>
               </form>
-              <p className="text-muted-foreground">
+              <p className="measure text-muted-foreground">
                 Stripe needs your identity and tax details because it reports what
                 you earn to the tax authorities — that&apos;s their job, not ours, and
                 it&apos;s why we don&apos;t hold any of it.
@@ -153,14 +185,27 @@ export default async function VoucherPayoutsPage(props: PageProps<"/voucher/payo
       {/* What you've earned. */}
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-base">Your earnings</CardTitle>
-          <CardDescription>
-            {money(totalPaid)} paid · {money(totalComing)} still to come
-          </CardDescription>
+          <CardTitle>Your earnings</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
+        <CardContent className="space-y-5 text-sm">
+          {/* The two figures that answer why anyone is on this page. */}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p className="tabular font-heading text-3xl leading-none font-semibold">
+                {money(totalPaid)}
+              </p>
+              <p className="mt-2 font-semibold">Paid</p>
+            </div>
+            <div>
+              <p className="tabular font-heading text-3xl leading-none font-semibold text-brand-700">
+                {money(totalComing)}
+              </p>
+              <p className="mt-2 font-semibold">Still to come</p>
+            </div>
+          </div>
+
           {rows.length === 0 ? (
-            <p className="text-muted-foreground">
+            <p className="measure text-muted-foreground">
               Nothing yet. A payout appears here when someone you vouched for is
               hired and both they and the employer confirm it.
             </p>
@@ -170,25 +215,34 @@ export default async function VoucherPayoutsPage(props: PageProps<"/voucher/payo
               const job = hire ? (Array.isArray(hire.jobs) ? hire.jobs[0] : hire.jobs) : null;
               const meta = EXPLAIN[p.status as string] ?? EXPLAIN.scheduled;
               return (
-                <div key={p.id as string} className="rounded-md border p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-medium">
-                      {money(p.amount_cents as number)} · {job?.title ?? "a role"}
-                    </span>
-                    <Badge variant={meta.tone}>{meta.label}</Badge>
+                <div key={p.id as string} className="rounded-lg bg-sunken p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <p className="font-semibold">{job?.title ?? "a role"}</p>
+                    <div className="text-right">
+                      <p className="tabular font-heading text-xl font-semibold">
+                        {money(p.amount_cents as number)}
+                      </p>
+                      <Badge variant={meta.tone} className="mt-1.5">
+                        {meta.label}
+                      </Badge>
+                    </div>
                   </div>
-                  <p className="mt-1 text-muted-foreground">
+                  <p className="measure mt-2 text-muted-foreground">
                     {meta.line}
-                    {p.status === "scheduled" && p.release_at ? ` Releases ${p.release_at}.` : ""}
-                    {p.status === "paid" && p.paid_at ? ` Sent ${String(p.paid_at).slice(0, 10)}.` : ""}
+                    {p.status === "scheduled" && p.release_at
+                      ? ` Releases ${p.release_at}.`
+                      : ""}
+                    {p.status === "paid" && p.paid_at
+                      ? ` Sent ${String(p.paid_at).slice(0, 10)}.`
+                      : ""}
                   </p>
                   {p.hold_reason ? (
-                    <p className="mt-2 rounded-md border px-3 py-2 text-muted-foreground">{p.hold_reason}</p>
+                    <p className="mt-3 rounded-lg bg-card px-4 py-3 text-muted-foreground">
+                      {p.hold_reason}
+                    </p>
                   ) : null}
                   {p.last_error ? (
-                    <p className="mt-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-destructive">
-                      {p.last_error}
-                    </p>
+                    <FormError className="mt-3">{p.last_error}</FormError>
                   ) : null}
                 </div>
               );
@@ -196,6 +250,7 @@ export default async function VoucherPayoutsPage(props: PageProps<"/voucher/payo
           )}
         </CardContent>
       </Card>
-    </main>
+      </main>
+    </>
   );
 }

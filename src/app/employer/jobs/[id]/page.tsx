@@ -8,11 +8,13 @@
 
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { ArrowLeftIcon, SparklesIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { currentProfile } from "@/lib/auth";
 import { setCandidateStatus } from "../../actions";
 import { HireForm } from "./HireForm";
 import { SeparationPanel, type SeparationHire } from "@/components/separation-panel";
+import { AppHeader } from "@/components/app-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,20 +77,34 @@ export default async function CandidatesPage(props: PageProps<"/employer/jobs/[i
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-12">
+    <>
+      <AppHeader profile={profile} />
+
+      <main className="mx-auto w-full max-w-3xl px-6 py-10 sm:py-14">
       <Button variant="ghost" size="sm" render={<Link href="/employer/jobs" />}>
-        ← Your roles
+        <ArrowLeftIcon aria-hidden="true" />
+        Your roles
       </Button>
 
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight">{job.title as string}</h1>
-      <p className="mt-1 text-muted-foreground">
+      <h1 className="mt-5 text-3xl font-semibold sm:text-4xl">
+        {job.title as string}
+      </h1>
+      <p className="mt-2 text-muted-foreground">
         {location?.label ? `${location.label} · ` : ""}
-        {job.status as string} · {money(job.fee_amount_cents as number)} if you hire
+        {job.status as string} ·{" "}
+        <span className="tabular font-semibold text-foreground">
+          {money(job.fee_amount_cents as number)}
+        </span>{" "}
+        if you hire
       </p>
 
       {params.posted ? (
-        <p role="status" className="mt-6 rounded-md border px-3 py-2 text-sm">
-          Posted. Seekers can find it now, and anyone vouched for will appear here.
+        <p
+          role="status"
+          className="mt-6 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
+        >
+          Posted. Seekers can find it now, and anyone vouched for will appear
+          here.
         </p>
       ) : null}
 
@@ -107,9 +123,11 @@ export default async function CandidatesPage(props: PageProps<"/employer/jobs/[i
           return (
             <Card key={c.id as string}>
               <CardHeader>
-                <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+                <CardTitle className="flex flex-wrap items-center gap-2.5 text-lg">
                   {person?.full_name ?? "Someone"}
-                  <Badge variant={c.status === "hired" ? "default" : "outline"}>{c.status as string}</Badge>
+                  <Badge variant={c.status === "hired" ? "success" : "soft"}>
+                    {c.status as string}
+                  </Badge>
                 </CardTitle>
                 <CardDescription>
                   {sp?.headline ?? "No headline"}
@@ -120,23 +138,38 @@ export default async function CandidatesPage(props: PageProps<"/employer/jobs/[i
 
               <CardContent className="space-y-4 text-sm">
                 {/* The vouch. This is the reason they're on your screen. */}
+                {/* The vouch is the reason this person is on your screen at
+                    all, so it gets the most weight on the card. */}
                 {vouch ? (
-                  <div className="rounded-md border p-3">
+                  <div className="rounded-lg bg-brand-50 p-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium">
+                      <span className="font-semibold text-brand-900">
                         {voucher?.full_name ?? "A colleague"}
-                        {voucherProfile?.job_title ? `, ${voucherProfile.job_title}` : ""}
+                        {voucherProfile?.job_title
+                          ? `, ${voucherProfile.job_title}`
+                          : ""}
                       </span>
-                      <Badge variant={vouch.relationship === "knows_personally" ? "default" : "secondary"}>
+                      <Badge
+                        variant={
+                          vouch.relationship === "knows_personally"
+                            ? "default"
+                            : "outline"
+                        }
+                      >
                         {vouch.relationship === "knows_personally"
                           ? "Knows them personally"
                           : "Reviewed their profile only"}
                       </Badge>
                     </div>
-                    <p className="mt-2 whitespace-pre-line">{vouch.body}</p>
-                    <p className="mt-2 text-muted-foreground">
-                      They receive {money(vouch.disclosed_fee_cents as number)} if you hire this
-                      person and they stay 60 days.
+                    <blockquote className="measure mt-3 border-l-2 border-brand-300 pl-3 whitespace-pre-line text-brand-900">
+                      {vouch.body}
+                    </blockquote>
+                    <p className="mt-3 text-brand-800">
+                      They receive{" "}
+                      <span className="tabular font-semibold">
+                        {money(vouch.disclosed_fee_cents as number)}
+                      </span>{" "}
+                      if you hire this person and they stay 60 days.
                     </p>
                   </div>
                 ) : null}
@@ -145,16 +178,23 @@ export default async function CandidatesPage(props: PageProps<"/employer/jobs/[i
                     database refuses to store a score without its reasoning,
                     and refuses any update that scores and moves someone at
                     the same time. */}
-                <div className="rounded-md border bg-muted/40 p-3">
+                <div className="rounded-lg bg-sunken p-4">
                   {c.ai_fit_score != null ? (
                     <>
-                      <p className="font-medium">
-                        AI fit score: {c.ai_fit_score} / 100 — advisory only
+                      <p className="flex flex-wrap items-center gap-2 font-semibold">
+                        <SparklesIcon
+                          className="size-4 text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                        <span className="tabular">
+                          AI fit score: {c.ai_fit_score} / 100
+                        </span>
+                        <Badge variant="outline">Advisory only</Badge>
                       </p>
-                      <p className="mt-1 whitespace-pre-line text-muted-foreground">
+                      <p className="measure mt-2 whitespace-pre-line text-muted-foreground">
                         {c.ai_reasoning}
                       </p>
-                      <p className="mt-2 text-xs text-muted-foreground">
+                      <p className="measure mt-3 text-xs text-muted-foreground">
                         A suggestion about reading order, nothing more. It is
                         told to ignore age, sex, race, nationality, religion,
                         disability, family status, school prestige, employment
@@ -162,16 +202,16 @@ export default async function CandidatesPage(props: PageProps<"/employer/jobs/[i
                       </p>
                     </>
                   ) : (
-                    <p className="text-muted-foreground">
+                    <p className="measure text-muted-foreground">
                       No AI score for this candidate. That happens when scoring is
                       switched off, or when it couldn&apos;t produce reasoning it could
                       stand behind — we store nothing rather than a bare number. Read
                       the vouch; it is the better signal anyway.
                     </p>
                   )}
-                  <p className="mt-2 text-muted-foreground">
-                    Whatever the score says, the decision on this page is yours. Nothing
-                    here rejects anyone automatically.
+                  <p className="measure mt-3 font-medium">
+                    Whatever the score says, the decision on this page is yours.
+                    Nothing here rejects anyone automatically.
                   </p>
                 </div>
 
@@ -184,7 +224,7 @@ export default async function CandidatesPage(props: PageProps<"/employer/jobs/[i
                 )}
 
                 {/* What happens next — a person chooses. */}
-                <div className="flex flex-wrap items-center gap-2 border-t pt-4">
+                <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
                   {(NEXT_STEPS[c.status as string] ?? []).map((step) => (
                     <form key={step.value} action={setCandidateStatus}>
                       <input type="hidden" name="application_id" value={c.id as string} />
@@ -202,8 +242,12 @@ export default async function CandidatesPage(props: PageProps<"/employer/jobs/[i
 
                 {hire ? (
                   <>
-                    <p className="text-muted-foreground">
-                      Hire recorded, starting {hire.start_date}.{" "}
+                    <p className="measure text-muted-foreground">
+                      Hire recorded, starting{" "}
+                      <span className="tabular font-semibold text-foreground">
+                        {hire.start_date}
+                      </span>
+                      .{" "}
                       {hire.confirmed_by_seeker_at
                         ? "They've confirmed it too, so the fee is due and the voucher's share is scheduled."
                         : "Waiting for them to confirm — nothing is owed until they do."}
@@ -226,9 +270,9 @@ export default async function CandidatesPage(props: PageProps<"/employer/jobs/[i
 
         {(candidates ?? []).length === 0 ? (
           <Card>
-            <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              <p>No vouched candidates yet.</p>
-              <p className="mt-1">
+            <CardContent className="py-10 text-center">
+              <p className="font-semibold">No vouched candidates yet.</p>
+              <p className="measure mx-auto mt-1 text-sm text-muted-foreground">
                 People appear here only once a verified employee has vouched for
                 them — never as a pile of cold applications.
               </p>
@@ -236,6 +280,7 @@ export default async function CandidatesPage(props: PageProps<"/employer/jobs/[i
           </Card>
         ) : null}
       </div>
-    </main>
+      </main>
+    </>
   );
 }
