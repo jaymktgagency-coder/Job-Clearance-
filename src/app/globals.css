@@ -442,5 +442,62 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+    /* The delays matter as much as the durations. Collapsing only the
+       duration still leaves a staggered entrance sitting invisible behind
+       its delay — the hero diagram measured 420ms of blank panel before
+       snapping into place, which is the jarring version of the effect this
+       setting exists to avoid. */
+    animation-delay: -1ms !important;
+    transition-delay: 0s !important;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   THE ONE ANIMATED MOMENT ON THE HOME PAGE
+   ---------------------------------------------------------------------------
+   The hero diagram assembles itself once, on load: the rail grows out to the
+   right, then the three marks land on it in turn, each overshooting slightly
+   before it settles.
+
+   Note the direction of travel. The resting state — what you get with no
+   animation at all — is the FINISHED diagram, and the keyframes run from
+   hidden into it. Anyone with "reduce motion" switched on has the duration
+   collapsed to nothing by the rule at the end of this file, so they land on
+   the complete diagram instantly rather than on an empty box that never
+   fills in. Written the other way round, that setting would break the page.
+--------------------------------------------------------------------------- */
+
+@keyframes vouch-rail {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes vouch-step {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+    scale: 0.82;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+
+.vouch-chain-rail {
+  animation: vouch-rail var(--duration-slow) var(--ease-out) both;
+}
+
+.vouch-chain-step {
+  /* --i is the mark's position in the row, set on the element, so the three
+     land one after another instead of all at once. */
+  animation: vouch-step 520ms var(--ease-spring) both;
+  animation-delay: calc(160ms + var(--i) * 130ms);
 }
