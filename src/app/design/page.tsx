@@ -27,6 +27,9 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { HelloWave } from "@/components/hello-wave";
+import { Textarea } from "@/components/ui/textarea";
+import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -139,6 +142,17 @@ export default function DesignPage() {
       </Section>
 
       <Section
+        title="The wave"
+        note="The hello animation, hand-built from shapes rather than downloaded. It arrives, waves four times, and stops — once per page load, never on a loop. Reload this page to see it again."
+      >
+        <div className="flex flex-wrap items-end gap-10">
+          <HelloWave className="text-brand-500" size={96} />
+          <HelloWave className="text-brand-700" size={56} />
+          <HelloWave className="text-foreground" size={36} />
+        </div>
+      </Section>
+
+      <Section
         title="Fields"
         note="Buttons come toward you; fields go away from you. A button has a lit top edge and a shadow below it. A field has its shadow cast inwards, so it reads as a well cut into the page — somewhere to put something. Tap into one and it warms up."
       >
@@ -182,9 +196,29 @@ export default function DesignPage() {
             <Input id="d-off" disabled defaultValue="Set during onboarding" />
           </div>
 
-          <div className="space-y-2 sm:col-span-2">
+          <div className="space-y-2">
+            <Label htmlFor="d-where">Where do you work?</Label>
+            <Select id="d-where" defaultValue="">
+              <option value="" disabled>
+                Choose a company
+              </option>
+              <option>Blue Bottle Coffee</option>
+              <option>Northwind Logistics</option>
+              <option>Cascade Dental</option>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="d-file">Resume</Label>
             <Input id="d-file" type="file" />
+          </div>
+
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="d-vouch">Your vouch</Label>
+            <Textarea
+              id="d-vouch"
+              placeholder="How do you know them, and why would they do well here?"
+            />
           </div>
         </div>
       </Section>

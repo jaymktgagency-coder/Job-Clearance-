@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { HelloWave } from "@/components/hello-wave";
 import { VouchChain } from "@/components/vouch-chain";
 
 /**
@@ -99,6 +100,13 @@ export default function HomePage() {
           No label above the headline. A small word sitting over a large one
           adds nothing the headline does not already carry. */}
       <section className="mx-auto w-full max-w-5xl px-6 pt-20 pb-16 sm:pt-28">
+        {/* The greeting. A mark, not a label — the banned thing above a
+            headline is a small WORD repeating what the headline already says.
+            It waves once, and the diagram further down is timed to assemble
+            after it, so the page arrives as one sequence rather than two
+            things animating over each other. */}
+        <HelloWave className="mb-7 text-brand-500" size={60} />
+
         <h1 className="max-w-3xl text-[clamp(2.5rem,7vw,4.5rem)] leading-[1.05] font-semibold">
           Warm introductions beat cold applications.
         </h1>

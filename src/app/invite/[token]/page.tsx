@@ -11,8 +11,8 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/server";
 import { hashInviteToken } from "@/lib/invites";
+import { AuthShell } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
@@ -52,54 +52,52 @@ export default async function InvitePage(props: PageProps<"/invite/[token]">) {
   const usable = invitation !== null && !expired && !used;
 
   return (
-    <main className="mx-auto w-full max-w-lg px-6 py-16">
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {usable ? `${company} invited you to Vouch` : "This invitation can't be used"}
-          </CardTitle>
-          <CardDescription>
-            {usable
-              ? "Vouching means writing a short, honest note about someone applying where you work. You choose who — and you can always decline."
-              : used
-                ? "This invitation has already been used, or was withdrawn. Ask whoever sent it for a fresh one."
-                : expired
-                  ? "This invitation has expired. Ask whoever sent it for a fresh one."
-                  : "We don't recognise this link. Check you copied all of it."}
-          </CardDescription>
-        </CardHeader>
-
-        {usable ? (
-          <CardContent className="space-y-5">
-            <div className="rounded-md border p-4 text-sm">
-              <p>
-                <span className="text-muted-foreground">Company: </span>
-                <span className="font-medium">{company}</span>
-              </p>
-              {location ? (
-                <p className="mt-1">
-                  <span className="text-muted-foreground">Location: </span>
-                  <span className="font-medium">{location}</span>
-                </p>
-              ) : null}
-              <p className="mt-3 text-muted-foreground">
-                Because {company} invited you directly, you won&apos;t need to verify a
-                work email address — this invitation is the proof.
-              </p>
+    <AuthShell
+      greet={usable}
+      title={usable ? `${company} invited you.` : "This invitation can't be used."}
+      description={
+        usable
+          ? "Vouching means writing a short, honest note about someone applying where you work. You choose who — and you can always decline."
+          : used
+            ? "It has already been used, or was withdrawn. Ask whoever sent it for a fresh one."
+            : expired
+              ? "It has expired. Ask whoever sent it for a fresh one."
+              : "We don't recognise this link. Check you copied all of it."
+      }
+    >
+      {usable ? (
+        <div className="space-y-5">
+          <dl className="rounded-lg bg-sunken p-4 text-sm">
+            <div className="flex gap-2">
+              <dt className="text-muted-foreground">Company</dt>
+              <dd className="font-semibold">{company}</dd>
             </div>
+            {location ? (
+              <div className="mt-1 flex gap-2">
+                <dt className="text-muted-foreground">Location</dt>
+                <dd className="font-semibold">{location}</dd>
+              </div>
+            ) : null}
+          </dl>
 
-            <Button render={<Link href={`/signup?invite=${encodeURIComponent(token)}`} />}>
-              Accept and create my account
-            </Button>
-          </CardContent>
-        ) : (
-          <CardContent>
-            <Button variant="outline" render={<Link href="/" />}>
-              Back to Vouch
-            </Button>
-          </CardContent>
-        )}
-      </Card>
-    </main>
+          <p className="text-sm text-muted-foreground">
+            Because {company} invited you directly, you won&apos;t need to
+            verify a work email address — this invitation is the proof.
+          </p>
+
+          <Button
+            size="lg"
+            className="w-full"
+            render={<Link href={`/signup?invite=${encodeURIComponent(token)}`} />}
+          >
+            Accept and create my account
+          </Button>
+        </div>
+      ) : (
+        <Button variant="outline" size="lg" render={<Link href="/" />}>
+          Back to Vouch
+        </Button>
+      )}
+    </AuthShell>
   );
 }

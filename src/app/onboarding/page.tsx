@@ -11,7 +11,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { currentUser, currentProfile, pendingRole, pendingInviteToken, ROLE_LABEL } from "@/lib/auth";
 import { hashInviteToken } from "@/lib/invites";
 import { OnboardingForm } from "./OnboardingForm";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AuthShell } from "@/components/auth-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -53,23 +53,23 @@ export default async function OnboardingPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-lg px-6 py-12">
-      <Card>
-        <CardHeader>
-          <CardTitle>Finish setting up</CardTitle>
-          <CardDescription>
-            Signing up as a <strong>{ROLE_LABEL[role].toLowerCase()}</strong>. A few
-            details and you&apos;re in.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <OnboardingForm
-            role={role}
-            companies={companies ?? []}
-            invitedCompany={invitedCompany}
-          />
-        </CardContent>
-      </Card>
-    </main>
+    <AuthShell
+      title="Almost there."
+      description={
+        <>
+          Setting you up as a{" "}
+          <strong className="font-semibold text-foreground">
+            {ROLE_LABEL[role].toLowerCase()}
+          </strong>
+          . A few details and you are in.
+        </>
+      }
+    >
+      <OnboardingForm
+        role={role}
+        companies={companies ?? []}
+        invitedCompany={invitedCompany}
+      />
+    </AuthShell>
   );
 }

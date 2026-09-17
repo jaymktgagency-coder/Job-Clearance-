@@ -10,7 +10,8 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { currentUser } from "@/lib/auth";
 import { hashInviteToken } from "@/lib/invites";
 import { RoleForm } from "./RoleForm";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AuthShell } from "@/components/auth-shell";
+import { InlineLink } from "@/components/inline-link";
 
 export const dynamic = "force-dynamic";
 
@@ -43,20 +44,21 @@ export default async function SignUpPage(props: PageProps<"/signup">) {
   const company = token ? await invitedCompanyName(token) : null;
 
   return (
-    <main className="mx-auto w-full max-w-lg px-6 py-12">
-      <Card>
-        <CardHeader>
-          <CardTitle>Join Vouch</CardTitle>
-          <CardDescription>
-            {company
-              ? `${company} has invited you to vouch for people applying there.`
-              : "One account, whichever side of hiring you're on."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RoleForm inviteToken={token} invitedCompany={company ?? undefined} />
-        </CardContent>
-      </Card>
-    </main>
+    <AuthShell
+      greet
+      title={company ? `${company} invited you.` : "Join Vouch."}
+      description={
+        company
+          ? "They would like you to vouch for people applying there. It takes a minute."
+          : "One account, whichever side of hiring you are on."
+      }
+      footer={
+        <>
+          Already have an account? <InlineLink href="/login">Sign in</InlineLink>
+        </>
+      }
+    >
+      <RoleForm inviteToken={token} invitedCompany={company ?? undefined} />
+    </AuthShell>
   );
 }
