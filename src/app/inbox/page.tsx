@@ -10,8 +10,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { currentProfile } from "@/lib/auth";
+import { AppHeader } from "@/components/app-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
@@ -48,26 +48,33 @@ export default async function InboxPage(props: PageProps<"/inbox">) {
     .limit(1);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-12">
+    <>
+      <AppHeader profile={profile} />
+
+      <main className="mx-auto w-full max-w-3xl px-6 py-10 sm:py-14">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight">Your inbox</h1>
-        <Button variant="ghost" size="sm" render={<Link href="/dashboard" />}>
-          Dashboard
-        </Button>
+        <h1 className="text-3xl font-semibold sm:text-4xl">Your inbox</h1>
+        <Badge variant="soft">{openVouches ?? 0} of 5 vouches open</Badge>
       </div>
-      <p className="mt-2 text-muted-foreground">
-        People asking for a vouch at {company?.name ?? "your company"}. You choose
-        who — and declining is a perfectly good answer.
+      <p className="measure mt-3 text-lg text-muted-foreground">
+        People asking for a vouch at {company?.name ?? "your company"}. You
+        choose who — and declining is a perfectly good answer.
       </p>
 
       {params.vouched ? (
-        <p role="status" className="mt-6 rounded-md border px-3 py-2 text-sm">
+        <p
+          role="status"
+          className="mt-6 rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
+        >
           Vouch written. {company?.name} can now see this candidate, along with
           what you said and what you stand to earn.
         </p>
       ) : null}
       {params.declined ? (
-        <p role="status" className="mt-6 rounded-md border px-3 py-2 text-sm text-muted-foreground">
+        <p
+          role="status"
+          className="mt-6 rounded-lg bg-sunken px-4 py-3 text-sm text-muted-foreground"
+        >
           Declined. They&apos;ll see that nobody took it on — not who, or why.
         </p>
       ) : null}
@@ -81,10 +88,15 @@ export default async function InboxPage(props: PageProps<"/inbox">) {
           const job = Array.isArray(r.jobs) ? r.jobs[0] : r.jobs;
 
           return (
-            <Card key={r.id as string}>
+            <Card key={r.id as string} interactive className="group">
               <CardHeader>
-                <CardTitle className="text-base">
-                  <Link href={`/inbox/${r.id}`} className="underline-offset-4 hover:underline">
+                <CardTitle className="text-lg">
+                  {/* Stretched over the whole card, so the tap target is the
+                      card and not just the name. */}
+                  <Link
+                    href={`/inbox/${r.id}`}
+                    className="after:absolute after:inset-0 after:content-[''] group-hover/card:text-brand-800"
+                  >
                     {person?.full_name ?? "Someone"}
                   </Link>
                 </CardTitle>
@@ -96,18 +108,20 @@ export default async function InboxPage(props: PageProps<"/inbox">) {
               <CardContent className="space-y-3">
                 <p className="text-sm">
                   <span className="text-muted-foreground">Applying for </span>
-                  <span className="font-medium">{job?.title}</span>
+                  <span className="font-semibold">{job?.title}</span>
                 </p>
                 {r.message ? (
-                  <p className="text-sm italic text-muted-foreground">&ldquo;{r.message}&rdquo;</p>
+                  <blockquote className="measure border-l-2 border-brand-200 pl-3 text-sm text-muted-foreground italic">
+                    {r.message}
+                  </blockquote>
                 ) : null}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <span className="text-sm text-muted-foreground">
                     Asked {new Date(r.created_at as string).toLocaleDateString()}
                   </span>
-                  <Button size="sm" render={<Link href={`/inbox/${r.id}`} />}>
-                    Read their profile
-                  </Button>
+                  <span className="text-sm font-semibold text-brand-700">
+                    Read their profile →
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -116,9 +130,9 @@ export default async function InboxPage(props: PageProps<"/inbox">) {
 
         {(requests ?? []).length === 0 ? (
           <Card>
-            <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              <p>Nobody is waiting on you right now.</p>
-              <p className="mt-1">
+            <CardContent className="py-10 text-center">
+              <p className="font-semibold">Nobody is waiting on you right now.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
                 When someone asks for an intro to a role at {company?.name}, it
                 appears here.
               </p>
@@ -127,10 +141,10 @@ export default async function InboxPage(props: PageProps<"/inbox">) {
         ) : null}
       </div>
 
-      <p className="mt-8 text-sm text-muted-foreground">
-        <Badge variant="outline">{openVouches ?? 0} of 5 vouches open</Badge>{" "}
-        A vouch stays open until the employer hires or passes on that person.
-      </p>
-    </main>
+        <p className="mt-8 text-sm text-muted-foreground">
+          A vouch stays open until the employer hires or passes on that person.
+        </p>
+      </main>
+    </>
   );
 }

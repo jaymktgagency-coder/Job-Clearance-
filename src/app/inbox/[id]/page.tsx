@@ -4,10 +4,12 @@
 
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { ArrowLeftIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { currentProfile } from "@/lib/auth";
 import { minimumVouchLength } from "../actions";
 import { VouchForm } from "./VouchForm";
+import { AppHeader } from "@/components/app-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,21 +66,27 @@ export default async function RequestPage(props: PageProps<"/inbox/[id]">) {
   const stillOpen = request.status === "pending";
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-12">
+    <>
+      <AppHeader profile={profile} />
+
+      <main className="mx-auto w-full max-w-2xl px-6 py-10 sm:py-14">
       <Button variant="ghost" size="sm" render={<Link href="/inbox" />}>
-        ← Inbox
+        <ArrowLeftIcon aria-hidden="true" />
+        Inbox
       </Button>
 
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight">
+      <h1 className="mt-5 text-3xl font-semibold sm:text-4xl">
         {person?.full_name ?? "Someone"}
       </h1>
-      <p className="mt-1 text-muted-foreground">
-        Asking for an intro to <strong>{job?.title}</strong> at {company?.name}
+      <p className="mt-2 text-muted-foreground">
+        Asking for an intro to{" "}
+        <strong className="font-semibold text-foreground">{job?.title}</strong>{" "}
+        at {company?.name}
       </p>
 
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle className="text-base">Their profile</CardTitle>
+          <CardTitle>Their profile</CardTitle>
           <CardDescription>{sp?.headline ?? "No headline yet"}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
@@ -87,12 +95,16 @@ export default async function RequestPage(props: PageProps<"/inbox/[id]">) {
             {sp?.years_experience != null ? <span>{sp.years_experience} years experience</span> : null}
           </div>
 
-          {sp?.bio ? <p className="whitespace-pre-line">{sp.bio}</p> : null}
+          {sp?.bio ? (
+            <p className="measure whitespace-pre-line">{sp.bio}</p>
+          ) : null}
 
           {(sp?.skills ?? []).length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {(sp?.skills ?? []).map((s: string) => (
-                <Badge key={s} variant="secondary">{s}</Badge>
+                <Badge key={s} variant="soft">
+                  {s}
+                </Badge>
               ))}
             </div>
           ) : null}
@@ -112,9 +124,13 @@ export default async function RequestPage(props: PageProps<"/inbox/[id]">) {
           )}
 
           {request.message ? (
-            <div className="rounded-md border p-3">
-              <p className="text-muted-foreground">What they said to you:</p>
-              <p className="mt-1 italic">&ldquo;{request.message}&rdquo;</p>
+            <div className="rounded-lg bg-sunken p-4">
+              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                What they said to you
+              </p>
+              <blockquote className="measure mt-2 border-l-2 border-brand-300 pl-3 italic">
+                {request.message}
+              </blockquote>
             </div>
           ) : null}
         </CardContent>
@@ -122,17 +138,17 @@ export default async function RequestPage(props: PageProps<"/inbox/[id]">) {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-base">The role</CardTitle>
+          <CardTitle>The role</CardTitle>
           <CardDescription>{job?.title} · {company?.name}</CardDescription>
         </CardHeader>
         <CardContent className="text-sm">
-          <p className="whitespace-pre-line">{job?.description}</p>
+          <p className="measure whitespace-pre-line">{job?.description}</p>
         </CardContent>
       </Card>
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-base">
+          <CardTitle>
             {stillOpen ? "Your decision" : "This request is closed"}
           </CardTitle>
           {stillOpen ? (
@@ -160,6 +176,7 @@ export default async function RequestPage(props: PageProps<"/inbox/[id]">) {
           )}
         </CardContent>
       </Card>
-    </main>
+      </main>
+    </>
   );
 }

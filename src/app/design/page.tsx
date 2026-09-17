@@ -28,6 +28,8 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { HelloWave } from "@/components/hello-wave";
+import { AppHeader } from "@/components/app-header";
+import { StatusLine } from "@/components/status-mark";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -138,6 +140,34 @@ export default function DesignPage() {
           <Button variant="outline" render={<Link href="/" />}>
             Back to the home page
           </Button>
+        </div>
+      </Section>
+
+      <Section
+        title="The header"
+        note="The bar across the top of every signed-in screen. There was no header anywhere before this — each screen hand-rolled its own links back to wherever it thought you came from. The links change with your role; this one is showing a voucher's."
+      >
+        <div className="overflow-hidden rounded-lg shadow-raised">
+          <AppHeader
+            profile={{
+              id: "sample",
+              role: "voucher",
+              full_name: "Priya Raman",
+              email: "priya@example.com",
+            }}
+          />
+        </div>
+      </Section>
+
+      <Section
+        title="Progress marks"
+        note="These used to be emoji typed into the page. Every operating system draws those differently, they cannot take a colour from the palette, and a screen reader announces 'white heavy check mark' rather than what it means. These are drawn icons, and each carries a real word for anyone who cannot see it."
+      >
+        <div className="max-w-sm space-y-2.5">
+          <StatusLine state="done">Payment method</StatusLine>
+          <StatusLine state="waiting">Business registration</StatusLine>
+          <StatusLine state="attention">Tables exist, but no data yet</StatusLine>
+          <StatusLine state="failed">Supabase connection</StatusLine>
         </div>
       </Section>
 

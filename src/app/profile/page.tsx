@@ -9,6 +9,7 @@ import { currentProfile } from "@/lib/auth";
 import { AiNotice } from "@/components/ai-notice";
 import { ParsedResume, type ParsedResumeShape } from "@/components/parsed-resume";
 import { ProfileForm, ResumeForm, DeleteAccount } from "./ProfileForms";
+import { AppHeader } from "@/components/app-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -30,26 +31,24 @@ export default async function ProfilePage() {
   const parsed = (p?.resume_parsed ?? null) as ParsedResumeShape | null;
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-12">
+    <>
+      <AppHeader profile={profile} />
+
+      <main className="mx-auto w-full max-w-2xl px-6 py-10 sm:py-14">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight">Your profile</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" render={<Link href="/jobs" />}>
-            Browse roles
-          </Button>
-          <Button variant="ghost" size="sm" render={<Link href="/dashboard" />}>
-            Dashboard
-          </Button>
-        </div>
+        <h1 className="text-3xl font-semibold sm:text-4xl">Your profile</h1>
+        <Button variant="outline" render={<Link href="/jobs" />}>
+          Browse roles
+        </Button>
       </div>
-      <p className="mt-2 text-muted-foreground">
+      <p className="measure mt-3 text-lg text-muted-foreground">
         This is what a voucher reads before deciding whether to back you. Vouch
         is free for job seekers, always.
       </p>
 
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle className="text-base">About you</CardTitle>
+          <CardTitle>About you</CardTitle>
         </CardHeader>
         <CardContent>
           <ProfileForm
@@ -69,7 +68,7 @@ export default async function ProfilePage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-base">Your resume</CardTitle>
+          <CardTitle>Your resume</CardTitle>
           <CardDescription>
             Stored privately. Only you, a voucher at a company you&apos;ve asked for
             an intro at, and an employer who has a vouch for you can ever open it.
@@ -90,7 +89,7 @@ export default async function ProfilePage() {
       {p?.resume_path ? (
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle className="text-base">What we read from your resume</CardTitle>
+            <CardTitle>What we read from your resume</CardTitle>
             <CardDescription>
               {parsed
                 ? "This is what our AI took from your file. If something here is wrong or missing, fix it in your resume and upload it again — or correct it in the profile above, which is what vouchers actually read."
@@ -114,13 +113,14 @@ export default async function ProfilePage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-base">Your data</CardTitle>
+          <CardTitle>Your data</CardTitle>
           <CardDescription>Your resume is personal data. You control it.</CardDescription>
         </CardHeader>
         <CardContent>
           <DeleteAccount />
         </CardContent>
       </Card>
-    </main>
+      </main>
+    </>
   );
 }

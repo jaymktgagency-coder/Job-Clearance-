@@ -19,14 +19,16 @@ const LINKS = [
 
 export function SiteFooter() {
   return (
-    <footer className="mt-auto border-t">
-      <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-3 px-6 py-6 text-sm text-muted-foreground">
-        <p>
-          {LEGAL.serviceName} — free for job seekers, always.
-        </p>
-        <nav className="flex flex-wrap gap-4">
+    <footer className="mt-auto border-t border-border">
+      <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-8 text-sm text-muted-foreground">
+        <p>{LEGAL.serviceName} — free for job seekers, always.</p>
+        <nav className="flex flex-wrap gap-x-5 gap-y-2">
           {LINKS.map((l) => (
-            <Link key={l.href} href={l.href} className="underline-offset-4 hover:underline">
+            <Link
+              key={l.href}
+              href={l.href}
+              className="underline-offset-[0.2em] transition-colors duration-[160ms] ease-out hover:text-brand-700 hover:underline"
+            >
               {l.label}
             </Link>
           ))}
