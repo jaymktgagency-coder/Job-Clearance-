@@ -9,6 +9,18 @@
  * making somebody choose and then press is a step that exists only because it
  * was easier to build.
  *
+ * A DROPDOWN WITH NOTHING IN IT IS NOT SHOWN AT ALL
+ * Each control only appears when there is something to choose. This was a
+ * real bug, not a nicety: the Category list is built from the categories that
+ * open roles actually carry, and when no role carries one the control still
+ * rendered — with "All categories" as its only entry. Tapping it opened a
+ * one-item menu that changed nothing, which reads exactly like a broken
+ * filter, and was reported as one.
+ *
+ * A control with one option is worse than no control: it invites a tap and
+ * then does nothing. So when there is nothing to filter by, the reason is
+ * said in words instead.
+ *
  * `router.replace` rather than `push`, deliberately: pushing would put every
  * intermediate filter on the history stack, so a seeker who tried four
  * categories would need four taps of Back to leave the page.
@@ -105,43 +117,57 @@ export function JobFilters({
       className="mt-8 flex flex-wrap items-end gap-3"
       data-pending={pending ? "" : undefined}
     >
-      <div className="min-w-44 flex-1 space-y-1.5 sm:max-w-56">
-        <Label htmlFor="filter-category">Category</Label>
-        <Select
-          id="filter-category"
-          value={filters.category ?? ""}
-          disabled={pending}
-          onChange={(e) =>
-            change({ ...filters, category: e.currentTarget.value || undefined })
-          }
-        >
-          <option value="">All categories</option>
-          {categories.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
-            </option>
-          ))}
-        </Select>
-      </div>
+      {categories.length > 0 ? (
+        <div className="min-w-44 flex-1 space-y-1.5 sm:max-w-56">
+          <Label htmlFor="filter-category">Category</Label>
+          <Select
+            id="filter-category"
+            value={filters.category ?? ""}
+            disabled={pending}
+            onChange={(e) =>
+              change({ ...filters, category: e.currentTarget.value || undefined })
+            }
+          >
+            <option value="">All categories</option>
+            {categories.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+      ) : null}
 
-      <div className="min-w-44 flex-1 space-y-1.5 sm:max-w-56">
-        <Label htmlFor="filter-location">Location</Label>
-        <Select
-          id="filter-location"
-          value={filters.location ?? ""}
-          disabled={pending}
-          onChange={(e) =>
-            change({ ...filters, location: e.currentTarget.value || undefined })
-          }
-        >
-          <option value="">Anywhere</option>
-          {locations.map((l) => (
-            <option key={l.value} value={l.value}>
-              {l.label}
-            </option>
-          ))}
-        </Select>
-      </div>
+      {locations.length > 0 ? (
+        <div className="min-w-44 flex-1 space-y-1.5 sm:max-w-56">
+          <Label htmlFor="filter-location">Location</Label>
+          <Select
+            id="filter-location"
+            value={filters.location ?? ""}
+            disabled={pending}
+            onChange={(e) =>
+              change({ ...filters, location: e.currentTarget.value || undefined })
+            }
+          >
+            <option value="">Anywhere</option>
+            {locations.map((l) => (
+              <option key={l.value} value={l.value}>
+                {l.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+      ) : null}
+
+      {/* Said plainly rather than left as a dead control. Employers choose a
+          category when they post a role, so this clears itself up as soon as
+          one of them does. */}
+      {categories.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          None of the open roles has a category yet, so there is nothing to
+          filter by. Employers choose one when they post.
+        </p>
+      ) : null}
 
       {anySet ? (
         <Button variant="ghost" className="px-3" onClick={() => change({})}>
