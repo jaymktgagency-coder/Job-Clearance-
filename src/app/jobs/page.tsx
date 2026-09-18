@@ -16,8 +16,10 @@ import {
   filtersFromParams,
   filtersToQuery,
   noFilters,
+  radiusMiles,
   type JobFilters,
 } from "@/lib/job-filters";
+import { milesBetween, describeMiles } from "@/lib/geo";
 import { AppHeader } from "@/components/app-header";
 import { Avatar } from "@/components/avatar";
 import { HelloOverlay } from "@/components/hello-overlay";
@@ -59,6 +61,13 @@ function cityOf(job: { locations?: unknown }): string | null {
   return city?.trim() || null;
 }
 
+/** The ZIP of the place a role is at, if its employer has supplied one. */
+function postalOf(job: { locations?: unknown }): string | null {
+  const l = Array.isArray(job.locations) ? job.locations[0] : job.locations;
+  const zip = (l as { postal_code?: string | null } | null)?.postal_code;
+  return zip?.trim() || null;
+}
+
 export default async function JobsPage(props: PageProps<"/jobs">) {
   const profile = await currentProfile();
   if (!profile) redirect("/login");
@@ -85,10 +94,10 @@ export default async function JobsPage(props: PageProps<"/jobs">) {
 
   const supabase = await createClient();
 
-  const [{ data: allJobs }, { data: mine }, { data: categoryRows }] = await Promise.all([
+  const [{ data: allJobs }, { data: mine }, { data: categoryRows }, { data: meRow }, { data: radiusRow }] = await Promise.all([
     supabase
       .from("jobs")
-      .select("id, title, category, pay_type, pay_min_cents, pay_max_cents, created_at, companies(name, verification_tier, logo_url), locations(label, city, region)")
+      .select("id, title, category, pay_type, pay_min_cents, pay_max_cents, created_at, companies(name, verification_tier, logo_url), locations(label, city, region, postal_code)")
       .eq("status", "open")
       .order("created_at", { ascending: false }),
     // Which ones have they already asked about?
@@ -98,7 +107,57 @@ export default async function JobsPage(props: PageProps<"/jobs">) {
       .select("slug, label")
       .eq("is_active", true)
       .order("sort_order"),
+    // Where this seeker measures distance from. Null until they add a ZIP,
+    // and the Radius control is not offered until they have.
+    supabase
+      .from("seeker_profiles")
+      .select("postal_code")
+      .eq("user_id", profile.id)
+      .maybeSingle(),
+    // The distances the dropdown offers. In the settings table like every
+    // other number here, so it changes without a deploy.
+    supabase
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "job_radius_options_miles")
+      .order("effective_from", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
+
+  const radiusOptions = (() => {
+    const raw = radiusRow?.value;
+    return Array.isArray(raw) && raw.every((n) => typeof n === "number")
+      ? (raw as number[])
+      : [5, 10, 25, 50, 100];
+  })();
+
+  const myPostalCode = (meRow?.postal_code as string | null) ?? null;
+
+  // Only the ZIPs this page actually mentions — the seeker's own and one per
+  // role. A few dozen rows out of the Census table's thirty-three thousand,
+  // rather than loading the lot to measure eight jobs.
+  const neededZips = Array.from(
+    new Set(
+      [myPostalCode, ...(allJobs ?? []).map(postalOf)].filter(
+        (z): z is string => Boolean(z),
+      ),
+    ),
+  );
+
+  const { data: zipRows } = neededZips.length
+    ? await supabase
+        .from("postal_codes")
+        .select("code, latitude, longitude")
+        .in("code", neededZips)
+    : { data: [] };
+
+  const zipIndex = new Map(
+    (zipRows ?? []).map((z) => [
+      z.code as string,
+      { latitude: z.latitude as number, longitude: z.longitude as number },
+    ]),
+  );
 
   const asked = new Map((mine ?? []).map((r) => [r.job_id as string, r.status as string]));
   const openCount = (mine ?? []).filter((r) => r.status === "pending").length;
@@ -112,11 +171,50 @@ export default async function JobsPage(props: PageProps<"/jobs">) {
   // Migration 0014 adds the indexes this would need if the board outgrows it.
   // The moment "every open role" stops being a few hundred rows, move the two
   // `.filter` calls below into `.eq()` on the query above.
+  // How far each role is from the seeker. Worked out once here rather than
+  // inside the filter, because the same number is shown on the card.
+  //
+  // Null means "we cannot say": the role's place has no ZIP, or the seeker
+  // has not given one. A role we cannot measure is never silently dropped —
+  // see the filter below.
+  const distances = new Map<string, number | null>();
+  if (myPostalCode) {
+    const origin = zipIndex.get(myPostalCode);
+    for (const job of allJobs ?? []) {
+      const zip = postalOf(job);
+      const there = zip ? zipIndex.get(zip) : undefined;
+      distances.set(
+        job.id as string,
+        origin && there ? milesBetween(origin, there) : null,
+      );
+    }
+  }
+
+  const wanted = radiusMiles(filters);
+
   const jobs = (allJobs ?? []).filter((job) => {
     if (filters.category && job.category !== filters.category) return false;
     if (filters.location && cityOf(job) !== filters.location) return false;
+    if (wanted != null) {
+      const d = distances.get(job.id as string);
+      // A role whose distance is unknown is EXCLUDED from a distance search,
+      // and the count of those is shown underneath. Including them would mean
+      // "within 10 miles" quietly returning things 400 miles away; dropping
+      // them silently would mean a seeker never learning that half the board
+      // has no address on it.
+      if (d == null || d > wanted) return false;
+    }
     return true;
   });
+
+  // How many roles the distance filter could not judge, so the page can say so.
+  const unmeasurable = wanted == null
+    ? 0
+    : (allJobs ?? []).filter((j) => {
+        if (filters.category && j.category !== filters.category) return false;
+        if (filters.location && cityOf(j) !== filters.location) return false;
+        return distances.get(j.id as string) == null;
+      }).length;
 
   // The dropdowns' contents, built from what is actually posted.
   const presentCategories = new Set((allJobs ?? []).map((j) => j.category).filter(Boolean));
@@ -171,8 +269,18 @@ export default async function JobsPage(props: PageProps<"/jobs">) {
             filters={filters}
             categories={categoryOptions}
             locations={locationOptions}
+            radiusOptions={radiusOptions}
+            hasPostalCode={Boolean(myPostalCode)}
             resultCount={jobs.length}
           />
+        ) : null}
+
+        {unmeasurable > 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">
+            {unmeasurable} other {unmeasurable === 1 ? "role is" : "roles are"}{" "}
+            hidden because the employer hasn&apos;t given that place a ZIP
+            code, so we can&apos;t tell how far away {unmeasurable === 1 ? "it is" : "they are"}.
+          </p>
         ) : null}
 
         <div className="mt-10 space-y-4">
@@ -228,6 +336,11 @@ export default async function JobsPage(props: PageProps<"/jobs">) {
                     </span>
                   )}
                 </p>
+                {distances.get(job.id as string) != null ? (
+                  <span className="text-sm text-muted-foreground">
+                    {describeMiles(distances.get(job.id as string) as number)}
+                  </span>
+                ) : null}
                 {status ? (
                   <Badge variant={status === "vouched" ? "success" : "outline"}>
                     {status === "pending"

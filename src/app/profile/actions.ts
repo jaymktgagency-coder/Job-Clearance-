@@ -65,9 +65,18 @@ export async function saveProfile(
     .eq("id", ctx.user.id);
   if (nameErr) return { error: `We couldn't save your name: ${nameErr.message}` };
 
+  // The ZIP the distance filter measures from. Five digits or nothing — a
+  // real-looking but non-existent one is refused by the foreign key onto the
+  // Census table, and that message is turned into English below.
+  const postal = String(formData.get("postal_code") ?? "").trim();
+  if (postal && !/^\d{5}$/.test(postal)) {
+    return { error: "A ZIP code is five digits, like 98101. Leave it blank if you'd rather not say." };
+  }
+
   const { error } = await ctx.supabase
     .from("seeker_profiles")
     .update({
+      postal_code: postal || null,
       headline: String(formData.get("headline") ?? "").trim() || null,
       location: String(formData.get("location") ?? "").trim() || null,
       bio: String(formData.get("bio") ?? "").trim() || null,
@@ -78,9 +87,15 @@ export async function saveProfile(
     })
     .eq("user_id", ctx.user.id);
 
-  if (error) return { error: `We couldn't save your profile: ${error.message}` };
+  if (error) {
+    if (error.code === "23503") {
+      return { error: `We don't recognise ${postal} as a US ZIP code. Check the digits.` };
+    }
+    return { error: `We couldn't save your profile: ${error.message}` };
+  }
 
   revalidatePath("/profile");
+  revalidatePath("/jobs");
   return { error: null, notice: "Saved." };
 }
 
