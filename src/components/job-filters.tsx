@@ -39,6 +39,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { InlineLink } from "@/components/inline-link";
 
 export type FilterOption = { value: string; label: string };
 
@@ -91,11 +92,17 @@ export function JobFilters({
   filters,
   categories,
   locations,
+  radiusOptions,
+  hasPostalCode,
   resultCount,
 }: {
   filters: FilterState;
   categories: FilterOption[];
   locations: FilterOption[];
+  /** The distances to offer, from platform_settings. */
+  radiusOptions: number[];
+  /** False when the seeker has not given a ZIP, so there is nothing to measure from. */
+  hasPostalCode: boolean;
   resultCount: number;
 }) {
   const router = useRouter();
@@ -110,7 +117,7 @@ export function JobFilters({
     });
   }
 
-  const anySet = Boolean(filters.category || filters.location);
+  const anySet = Boolean(filters.category || filters.location || filters.radius);
 
   return (
     <div
@@ -159,20 +166,55 @@ export function JobFilters({
         </div>
       ) : null}
 
+      {/* Distance. Offered only to somebody we can measure FROM: without a ZIP
+          on their profile there is no origin, and a control that cannot work
+          is the bug that brought us here in the first place. */}
+      {hasPostalCode && radiusOptions.length > 0 ? (
+        <div className="min-w-44 flex-1 space-y-1.5 sm:max-w-56">
+          <Label htmlFor="filter-radius">Distance</Label>
+          <Select
+            id="filter-radius"
+            value={filters.radius ?? ""}
+            disabled={pending}
+            onChange={(e) =>
+              change({ ...filters, radius: e.currentTarget.value || undefined })
+            }
+          >
+            <option value="">Any distance</option>
+            {radiusOptions.map((m) => (
+              <option key={m} value={String(m)}>
+                Within {m} miles
+              </option>
+            ))}
+          </Select>
+        </div>
+      ) : null}
+
       {/* Said plainly rather than left as a dead control. Employers choose a
           category when they post a role, so this clears itself up as soon as
           one of them does. */}
-      {categories.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          None of the open roles has a category yet, so there is nothing to
-          filter by. Employers choose one when they post.
-        </p>
-      ) : null}
-
       {anySet ? (
         <Button variant="ghost" className="px-3" onClick={() => change({})}>
           Clear
         </Button>
+      ) : null}
+
+      {/* `basis-full` so these take a row of their own BENEATH the controls.
+          Without it they are just another flex item, and a sentence that long
+          pushes "Clear" onto the end of it — which is how it shipped, and what
+          looking at the deployed site caught. */}
+      {!hasPostalCode ? (
+        <p className="basis-full text-sm text-muted-foreground">
+          <InlineLink href="/profile">Add your ZIP code</InlineLink> to filter
+          roles by how far they are from you.
+        </p>
+      ) : null}
+
+      {categories.length === 0 ? (
+        <p className="basis-full text-sm text-muted-foreground">
+          None of the open roles has a category yet, so there is nothing to
+          filter by. Employers choose one when they post.
+        </p>
       ) : null}
 
       {/* Announced rather than shown: the count is already visible above the

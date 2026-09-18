@@ -34,6 +34,7 @@ export type ProfileValues = {
   skills: string;
   desired_titles: string;
   open_to_work: boolean;
+  postal_code: string;
 };
 
 export function ProfileForm({ values }: { values: ProfileValues }) {
@@ -61,6 +62,22 @@ export function ProfileForm({ values }: { values: ProfileValues }) {
           <Label htmlFor="location">Where you&apos;re looking</Label>
           <Input id="location" name="location" defaultValue={values.location} placeholder="Seattle, WA" />
         </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="postal_code">Your ZIP code (optional)</Label>
+        <Input
+          id="postal_code"
+          name="postal_code"
+          inputMode="numeric"
+          maxLength={5}
+          defaultValue={values.postal_code}
+          placeholder="98107"
+        />
+        <p className="text-sm text-muted-foreground">
+          Only used to work out how far a job is from you, so you can filter
+          the list by distance. It is never shown to anybody.
+        </p>
+      </div>
         <div className="space-y-2">
           <Label htmlFor="years_experience">Years of experience</Label>
           <Input id="years_experience" name="years_experience" type="number" min={0} max={60} defaultValue={values.years_experience} />

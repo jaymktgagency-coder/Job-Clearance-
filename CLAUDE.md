@@ -25,6 +25,11 @@ shapes everything:
 
 - Write **plain-English comments** explaining what each file does and why.
 - After each step, say exactly how to test it — on the live site, not locally.
+- **Verify on the live deployed site before calling anything done.** A green
+  local build and a happy database are not evidence that the thing works: a
+  filter shipped visibly broken because it was only ever checked that way.
+  Verification needs a Supabase personal access token — **ask for one and say
+  plainly that you are blocked without it**, then follow the routine below.
 - **Keep dependencies minimal.** Current runtime deps: Next, React, Tailwind,
   shadcn/Base UI, `@supabase/*`, `@anthropic-ai/sdk`, `stripe`, `lottie-react`.
   Adding one is a decision, not a reflex. A ~60-line hand-written zip reader
@@ -112,6 +117,7 @@ src/
     employer/jobs/[id]/   employer/billing/           api/stripe/webhook/
     employer/company/     voucher/profile/  -- each role's own profile page
     voucher/seekers/      -- people who named your employer, and reaching out
+    employer/locations/   -- the places a company hires into, and their ZIPs
     terms/ privacy/ refunds/ support/   setup/
     hires/actions.ts      -- separation flow, shared by both sides
   components/  ai-notice, parsed-resume, separation-panel, site-footer, legal/, ui/
@@ -120,7 +126,7 @@ src/
   assets/      hello-apple.json -- the greeting animation, as downloaded
   lib/
     env.ts legal.ts auth.ts invites.ts email.ts email-domains.ts verification-codes.ts
-    avatars.ts job-filters.ts outreach.ts
+    avatars.ts job-filters.ts outreach.ts geo.ts
     supabase/{client,server,health,db-status}.ts
     ai/{client,resume-file,parse-resume,score-fit,run}.ts
     stripe/{client,payment-methods}.ts
@@ -131,8 +137,8 @@ scripts/                 seed.mts, ai-backfill.mts
 tests/                   7 browser tests (.mjs) + ai-layer.mts + stripe-9a.mts
 ```
 
-23 tables, 1 view (`voucher_reputation`, security_invoker), 18 enums,
-64 RLS policies.
+24 tables, 1 view (`voucher_reputation`, security_invoker), 18 enums,
+65 RLS policies.
 
 ## The security guards, and why each exists
 
@@ -206,6 +212,28 @@ unique constraint on `key` alone, so `on conflict (key)` fails. Insert with
 
 **Never hardcode a money number.** Read it from `platform_settings` via
 `platform_setting_int(key, default)`.
+
+**Verifying against the live site, in a real browser.** This is possible and
+was wrongly believed not to be. The egress proxy re-terminates TLS with its own
+CA, which Chromium rejects — but the fix is to TRUST the CA, never to disable
+verification. Write the bundle at `/root/.ccr/ca-bundle.crt` into a Chromium
+enterprise policy as base64 DER:
+
+```js
+// /etc/chromium/policies/managed/ccr-proxy-ca.json
+{ "CACertificates": ["<base64 DER of each cert in the bundle>"] }
+```
+
+then launch Playwright with `proxy: { server: process.env.HTTPS_PROXY }`. Sign
+in as a seeded demo account (password `vouch-demo-1234`) and drive the real
+thing. **Two projects answer to this token** — `nxhmntietskcxzdtyjhp` ("Vouch
+v1") is the live one; the other is empty. Check before writing.
+
+**A merge is not a deploy.** PR #9 sat merged on `main` for over half an hour
+with the live site still serving the previous build, so "fixed" would have been
+untrue. `/jobs` is `force-dynamic`, so it is never CDN-cached — if it still
+behaves like the old code, the DEPLOYMENT is stale, not the cache. The landing
+page is cached and will lie about this (`x-vercel-cache: HIT`, a large `age`).
 
 **Migrations reach the live database only through the Supabase Management API**
 (`api.supabase.com`) with a personal access token — direct Postgres port 5432
@@ -293,6 +321,28 @@ once.
 the *reading* applies the cutoff — otherwise a voucher's cap looks full of
 messages that went stale weeks ago.
 
+**A filter needs data behind it or it ships dead.** This has now happened
+twice. Category shipped with `jobs.category` added and never backfilled, and
+no way to set one on an existing role — so the dropdown held a single option
+and was reported as broken. Radius would have shipped the same way: `locations`
+has had a `postal_code` column since 0001, nothing ever set it, and **there was
+no screen anywhere to create or edit a location at all**. `/employer/locations`
+exists because of that. Before adding a filter, ask who supplies the data and
+on which screen.
+
+**The haversine exists twice, on purpose.** `miles_between` in SQL (0016) so a
+distance can be asked for in a query, and `milesBetween` in `lib/geo.ts` so the
+job list can filter in memory without a round trip per role. Neither is checked
+against the other — **both are pinned to the same real city distances**, in
+`97_radius.sql` and `tests/geo.mts` (`npm run test:geo`). Edit one into
+disagreement and one of the two suites fails.
+
+**ZIP centroids are not doorsteps.** Distance is centre-of-ZIP to centre-of-ZIP,
+which is why the screen says "about 20 miles away" and never "20.3". A role at
+a place with no ZIP is EXCLUDED from a distance search and counted underneath
+it — including it would mean "within 10 miles" returning things 400 miles away,
+and dropping it silently would hide half the board with no explanation.
+
 **Supabase gotchas:** errors are plain objects, not `Error` — check
 `"message" in error`. `head: true` returns 204 with a null count on a missing
 table; use `.select("id", { count: "exact" }).limit(1)`. Uploading a `Blob`
@@ -344,6 +394,7 @@ failures.
 | `0013_profile_pictures.sql` | Public `avatars` bucket. **No new columns** — `users.avatar_url` and `companies.logo_url` existed from 0001 |
 | `0014_job_categories.sql` | `job_categories` lookup table + `jobs.category`; the list is rows, not an enum, so it changes without a migration |
 | `0015_voucher_outreach.sql` | The other direction: `seeker_company_interests`, `voucher_outreach`, and the column-allowlist function that keeps email and resume out of it |
+| `0016_radius.sql` | 33,791 US ZIP centroids from the Census gazetteer (public domain), `seeker_profiles.postal_code`, and the haversine. ~0.9 MB — the data is IN the migration because the founder cannot run a loader script |
 
 ## Testing
 
@@ -380,14 +431,16 @@ neither can be merged to `main` or exercised end to end.
 
 Still open, in rough priority order:
 
-- **Apply 0013 + 0014 + 0015 before merging the code that needs them** — the job list
+- **All migrations through 0016 are applied to the live database** (18 Sep),
+  each verified afterwards by attacking as a real logged-in user.
+- **Nobody's locations have ZIPs yet.** The Radius filter stays hidden until an
+  employer fills them in at `/employer/locations`, and stays useless to a
+  seeker until they add their own ZIP on `/profile`.
+- ~~Apply 0013 + 0014 + 0015 before merging the code that needs them~~ — the job list
   reads `jobs.category` and `job_categories`, and the profile pages upload to
-  the `avatars` bucket, and the whole outreach feature is 0015. All three are
-  dead without their migration.
-- **Radius filter is not built.** Category and Location ship; Radius needs
-  coordinates nobody has — `locations` stores a text address with no lat/lng,
-  and `seeker_profiles.location` is free text. Decide between real ZIP-centroid
-  distance and a coarse city/state scope before building it.
+  the `avatars` bucket, and the whole outreach feature is 0015. **All three
+  were applied to the live database on 18 Sep** and verified by attacking as a
+  real logged-in user.
 - Apply 0009 + 0010, verify by attacking as a real user, then merge.
 - 9b charge on confirmed hire · 9c voucher Connect onboarding · 9d the
   release job (Vercel Cron — **nothing runs on a schedule yet**, so

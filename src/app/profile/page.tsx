@@ -28,7 +28,7 @@ export default async function ProfilePage() {
   const [{ data: p }, { data: interestRows }, { data: allCompanies }] = await Promise.all([
     supabase
       .from("seeker_profiles")
-      .select("headline, location, bio, years_experience, skills, desired_titles, open_to_work, resume_path, resume_uploaded_at, resume_parsed, resume_parsed_at")
+      .select("headline, location, postal_code, bio, years_experience, skills, desired_titles, open_to_work, resume_path, resume_uploaded_at, resume_parsed, resume_parsed_at")
       .eq("user_id", profile.id)
       .maybeSingle(),
     supabase
@@ -110,6 +110,7 @@ export default async function ProfilePage() {
               skills: (p?.skills ?? []).join(", "),
               desired_titles: (p?.desired_titles ?? []).join(", "),
               open_to_work: p?.open_to_work ?? true,
+              postal_code: p?.postal_code ?? "",
             }}
           />
         </CardContent>

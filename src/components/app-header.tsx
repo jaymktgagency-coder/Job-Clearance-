@@ -41,6 +41,9 @@ const NAV: Record<Profile["role"], { href: string; label: string }[]> = {
   ],
   employer: [
     { href: "/employer/jobs", label: "Roles" },
+    // Where they hire into. A role's ZIP comes from here, and that is what a
+    // seeker's distance search measures against.
+    { href: "/employer/locations", label: "Places" },
     { href: "/employer/billing", label: "Billing" },
     { href: "/employer/company", label: "Company" },
   ],

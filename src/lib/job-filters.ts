@@ -1,6 +1,6 @@
 /**
- * job-filters.ts — the seeker's Category and Location filters, and the one
- * place that knows how they are remembered.
+ * job-filters.ts — the seeker's Category, Location and Radius filters, and
+ * the one place that knows how they are remembered.
  *
  * Plain English: a seeker sets a filter, clicks into a role, asks for an
  * intro, and comes back to the list. The filters are still set. That is the
@@ -28,7 +28,7 @@
  */
 
 /** The name in the address bar and in the cookie. Written once, used everywhere. */
-export const FILTER_KEYS = ["category", "location"] as const;
+export const FILTER_KEYS = ["category", "location", "radius"] as const;
 
 export type FilterKey = (typeof FILTER_KEYS)[number];
 
@@ -39,6 +39,22 @@ export const FILTER_COOKIE = "vouch_job_filters";
 
 /** The value meaning "don't filter on this". Kept out of the address bar. */
 export const ANY = "";
+
+/**
+ * Radius, as a whole number of miles, or null when it is not a usable one.
+ *
+ * Parsed rather than trusted: `?radius=abc` and `?radius=-5` are a filter
+ * nobody set, and the honest answer to both is to ignore them rather than to
+ * show an empty board. The ceiling stops `?radius=999999` being a way to make
+ * the server sort every job on the site by distance.
+ */
+export function radiusMiles(filters: JobFilters): number | null {
+  const raw = filters.radius;
+  if (!raw) return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.min(Math.round(n), 500);
+}
 
 /**
  * Reads the filters out of whatever the page was given.
