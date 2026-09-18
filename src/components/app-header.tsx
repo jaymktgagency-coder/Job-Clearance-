@@ -59,7 +59,7 @@ const PROFILE_HREF: Record<Profile["role"], string> = {
 export function AppHeader({ profile }: { profile: Profile }) {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-5xl items-center gap-4 px-6 py-3">
+      <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-4 gap-y-1 px-6 py-3">
         <Link
           href="/dashboard"
           className="font-heading inline-flex min-h-11 items-center text-lg font-semibold tracking-[-0.03em] transition-colors duration-[160ms] ease-out hover:text-brand-700"
@@ -71,9 +71,20 @@ export function AppHeader({ profile }: { profile: Profile }) {
           {ROLE_LABEL[profile.role]}
         </Badge>
 
-        {/* Scrolls sideways on a narrow screen rather than wrapping onto a
-            second line and pushing the page down. */}
-        <nav className="-mx-2 flex flex-1 items-center gap-1 overflow-x-auto px-2">
+        {/* On a phone the links take a row of their own, underneath.
+            
+            They used to sit on the one row and scroll sideways, on the
+            reasoning that a second row pushes the page down. That was wrong,
+            and badly so: the row could not fit them, so the last link — the
+            seeker's "Profile", an employer's "Billing" and "Company" — ended
+            up beyond the scroll box, underneath the avatar and Sign out. It
+            was not merely awkward to reach, it was untappable, and there was
+            no sign it had scrolled. A founder testing on a phone could not
+            open their own profile.
+            
+            Adding the avatar and a fourth employer link is what tipped it
+            over. One row of links you can see beats one row you cannot. */}
+        <nav className="-mx-2 order-last flex basis-full items-center gap-1 overflow-x-auto px-2 pb-1 sm:order-none sm:basis-auto sm:flex-1 sm:pb-0">
           {NAV[profile.role].map((item) => (
             /* Full 44px height, with the horizontal padding pulled in so
                three of them still fit across a phone. */
@@ -121,15 +132,15 @@ export function AppHeader({ profile }: { profile: Profile }) {
 export function AppHeaderSkeleton() {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-5xl items-center gap-4 px-6 py-3">
+      <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-4 gap-y-1 px-6 py-3">
         <span className="font-heading inline-flex min-h-11 items-center text-lg font-semibold tracking-[-0.03em]">
           Vouch
         </span>
         <Skeleton className="hidden h-6 w-20 rounded-full sm:block" />
-        <div className="flex flex-1 items-center gap-1">
+        <div className="order-last flex basis-full items-center gap-1 pb-1 sm:order-none sm:basis-auto sm:flex-1 sm:pb-0">
           <Skeleton className="h-11 w-20" />
           <Skeleton className="h-11 w-28" />
-          <Skeleton className="hidden h-11 w-20 sm:block" />
+          <Skeleton className="h-11 w-20" />
         </div>
         <Skeleton className="size-8 rounded-full" />
         <Skeleton className="h-11 w-20" />
