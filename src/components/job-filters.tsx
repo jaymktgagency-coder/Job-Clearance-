@@ -190,27 +190,31 @@ export function JobFilters({
         </div>
       ) : null}
 
+      {/* Said plainly rather than left as a dead control. Employers choose a
+          category when they post a role, so this clears itself up as soon as
+          one of them does. */}
+      {anySet ? (
+        <Button variant="ghost" className="px-3" onClick={() => change({})}>
+          Clear
+        </Button>
+      ) : null}
+
+      {/* `basis-full` so these take a row of their own BENEATH the controls.
+          Without it they are just another flex item, and a sentence that long
+          pushes "Clear" onto the end of it — which is how it shipped, and what
+          looking at the deployed site caught. */}
       {!hasPostalCode ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="basis-full text-sm text-muted-foreground">
           <InlineLink href="/profile">Add your ZIP code</InlineLink> to filter
           roles by how far they are from you.
         </p>
       ) : null}
 
-      {/* Said plainly rather than left as a dead control. Employers choose a
-          category when they post a role, so this clears itself up as soon as
-          one of them does. */}
       {categories.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="basis-full text-sm text-muted-foreground">
           None of the open roles has a category yet, so there is nothing to
           filter by. Employers choose one when they post.
         </p>
-      ) : null}
-
-      {anySet ? (
-        <Button variant="ghost" className="px-3" onClick={() => change({})}>
-          Clear
-        </Button>
       ) : null}
 
       {/* Announced rather than shown: the count is already visible above the
