@@ -25,6 +25,11 @@ shapes everything:
 
 - Write **plain-English comments** explaining what each file does and why.
 - After each step, say exactly how to test it — on the live site, not locally.
+- **Verify on the live deployed site before calling anything done.** A green
+  local build and a happy database are not evidence that the thing works: a
+  filter shipped visibly broken because it was only ever checked that way.
+  Verification needs a Supabase personal access token — **ask for one and say
+  plainly that you are blocked without it**, then follow the routine below.
 - **Keep dependencies minimal.** Current runtime deps: Next, React, Tailwind,
   shadcn/Base UI, `@supabase/*`, `@anthropic-ai/sdk`, `stripe`, `lottie-react`.
   Adding one is a decision, not a reflex. A ~60-line hand-written zip reader
@@ -207,6 +212,28 @@ unique constraint on `key` alone, so `on conflict (key)` fails. Insert with
 
 **Never hardcode a money number.** Read it from `platform_settings` via
 `platform_setting_int(key, default)`.
+
+**Verifying against the live site, in a real browser.** This is possible and
+was wrongly believed not to be. The egress proxy re-terminates TLS with its own
+CA, which Chromium rejects — but the fix is to TRUST the CA, never to disable
+verification. Write the bundle at `/root/.ccr/ca-bundle.crt` into a Chromium
+enterprise policy as base64 DER:
+
+```js
+// /etc/chromium/policies/managed/ccr-proxy-ca.json
+{ "CACertificates": ["<base64 DER of each cert in the bundle>"] }
+```
+
+then launch Playwright with `proxy: { server: process.env.HTTPS_PROXY }`. Sign
+in as a seeded demo account (password `vouch-demo-1234`) and drive the real
+thing. **Two projects answer to this token** — `nxhmntietskcxzdtyjhp` ("Vouch
+v1") is the live one; the other is empty. Check before writing.
+
+**A merge is not a deploy.** PR #9 sat merged on `main` for over half an hour
+with the live site still serving the previous build, so "fixed" would have been
+untrue. `/jobs` is `force-dynamic`, so it is never CDN-cached — if it still
+behaves like the old code, the DEPLOYMENT is stale, not the cache. The landing
+page is cached and will lie about this (`x-vercel-cache: HIT`, a large `age`).
 
 **Migrations reach the live database only through the Supabase Management API**
 (`api.supabase.com`) with a personal access token — direct Postgres port 5432
@@ -404,9 +431,8 @@ neither can be merged to `main` or exercised end to end.
 
 Still open, in rough priority order:
 
-- **Apply 0016 before merging the code that needs it** — the job list reads
-  `postal_codes` and `seeker_profiles.postal_code`. 0013–0015 are already
-  applied to the live database.
+- **All migrations through 0016 are applied to the live database** (18 Sep),
+  each verified afterwards by attacking as a real logged-in user.
 - **Nobody's locations have ZIPs yet.** The Radius filter stays hidden until an
   employer fills them in at `/employer/locations`, and stays useless to a
   seeker until they add their own ZIP on `/profile`.
