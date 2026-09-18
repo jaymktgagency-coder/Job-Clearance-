@@ -34,6 +34,18 @@ function Card({
       className={cn(
         "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-lg bg-card py-(--card-spacing) text-sm text-card-foreground shadow-raised [--card-spacing:--spacing(5)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(4)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-lg *:[img:last-child]:rounded-b-lg",
         interactive && [
+          // `relative` is load-bearing, not decoration. An interactive card
+          // says "all of me is clickable", and the way that is done is a link
+          // inside it with `after:absolute after:inset-0` stretched over the
+          // whole card. `inset-0` is measured from the nearest POSITIONED
+          // ancestor — so without this the overlay escaped the card, spread
+          // across the list, and neighbouring cards' hit areas overlapped.
+          //
+          // On the live site that meant clicking the middle of one role
+          // opened a different one. Caught by hit-testing the deployed page,
+          // not by looking at it: it is invisible, and every card still
+          // highlighted correctly under the cursor.
+          "relative",
           "cursor-pointer transition-[translate,scale,box-shadow] duration-[260ms] ease-spring",
           "hover:-translate-y-0.5 hover:shadow-raised-lg",
           "active:translate-y-0 active:scale-[0.995] active:duration-[90ms] active:ease-enter active:shadow-raised",
