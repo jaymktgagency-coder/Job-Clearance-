@@ -31,6 +31,9 @@ const NAV: Record<Profile["role"], { href: string; label: string }[]> = {
   ],
   voucher: [
     { href: "/inbox", label: "Inbox" },
+    // The other direction of the marketplace: people who named your employer
+    // and can be written to first.
+    { href: "/voucher/seekers", label: "Find people" },
     { href: "/voucher/payouts", label: "Earnings" },
     // Not /profile: that is the seeker's page, and it used to bounce a
     // voucher straight back to their dashboard.

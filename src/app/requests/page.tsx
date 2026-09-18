@@ -10,6 +10,7 @@ import { withdrawRequest, confirmHire } from "../jobs/actions";
 import { SeparationPanel, type SeparationHire } from "@/components/separation-panel";
 import { AiNotice } from "@/components/ai-notice";
 import { AppHeader } from "@/components/app-header";
+import { OutreachPanel, type ApproachRow } from "@/components/outreach-panel";
 import { Avatar } from "@/components/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,52 @@ export default async function RequestsPage() {
     .from("intro_requests")
     .select("id, status, message, created_at, responded_at, jobs(id, title, companies(name, logo_url))")
     .order("created_at", { ascending: false });
+
+  // Employees who wrote to this seeker first. Declined and withdrawn ones are
+  // left out — an answered "no" is not something to keep showing somebody.
+  const { data: approachRows } = await supabase
+    .from("voucher_outreach")
+    .select(`id, message, status, created_at, company_id,
+             users!voucher_outreach_voucher_id_fkey(full_name, avatar_url, voucher_profiles(job_title)),
+             companies(name, logo_url)`)
+    .in("status", ["pending", "accepted"])
+    .order("created_at", { ascending: false });
+
+  // The open roles at the companies whose approaches were accepted — that is
+  // the "now ask them for an intro" step. One query for all of them rather
+  // than one per card.
+  const acceptedCompanies = (approachRows ?? [])
+    .filter((a) => a.status === "accepted")
+    .map((a) => a.company_id as string);
+
+  const { data: rolesAtThoseCompanies } = acceptedCompanies.length
+    ? await supabase
+        .from("jobs")
+        .select("id, title, company_id")
+        .eq("status", "open")
+        .in("company_id", acceptedCompanies)
+    : { data: [] };
+
+  const approaches: ApproachRow[] = (approachRows ?? []).map((a) => {
+    const v = Array.isArray(a.users) ? a.users[0] : a.users;
+    const vpRaw = v?.voucher_profiles;
+    const vp = Array.isArray(vpRaw) ? vpRaw[0] : vpRaw;
+    const c = Array.isArray(a.companies) ? a.companies[0] : a.companies;
+    return {
+      id: a.id as string,
+      message: a.message as string,
+      status: a.status as string,
+      created_at: a.created_at as string,
+      voucher_name: (v?.full_name as string) ?? "Someone",
+      voucher_avatar: (v?.avatar_url as string | null) ?? null,
+      voucher_title: (vp?.job_title as string | null) ?? null,
+      company_name: (c?.name as string) ?? "their company",
+      company_logo: (c?.logo_url as string | null) ?? null,
+      openRoles: (rolesAtThoseCompanies ?? [])
+        .filter((j) => j.company_id === a.company_id)
+        .map((j) => ({ id: j.id as string, title: j.title as string })),
+    };
+  });
 
   const open = (requests ?? []).filter((r) => r.status === "pending").length;
 
@@ -73,6 +120,22 @@ export default async function RequestsPage() {
         {open} of 5 open. The limit keeps requests meaningful — someone reading
         five focused asks takes them more seriously than fifty scattergun ones.
       </p>
+
+      {/* Above the seeker's own requests on purpose: somebody has written to
+          them and is waiting, which is more urgent than the state of a
+          request they sent last week. */}
+      {approaches.length > 0 ? (
+        <section className="mt-10 space-y-4">
+          <h2 className="font-heading text-xl font-semibold">
+            {approaches.length === 1
+              ? "Someone reached out to you"
+              : "People who reached out to you"}
+          </h2>
+          {approaches.map((a) => (
+            <OutreachPanel key={a.id} approach={a} />
+          ))}
+        </section>
+      ) : null}
 
       {(hires ?? []).map((h) => {
         const job = Array.isArray(h.jobs) ? h.jobs[0] : h.jobs;

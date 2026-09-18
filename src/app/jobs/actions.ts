@@ -29,10 +29,16 @@ export async function requestIntro(
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { error: "You're not signed in any more. Please sign in again." };
 
+  // Where this came from, when it began as somebody reaching out. Claiming a
+  // source that was never accepted does nothing: `protect_intro_request_source`
+  // silently nulls it, so this can be passed through without being trusted.
+  const sourceOutreachId = String(formData.get("source_outreach_id") ?? "").trim();
+
   const { error } = await supabase.from("intro_requests").insert({
     job_id: jobId,
     seeker_id: auth.user.id,
     message: message || null,
+    source_outreach_id: sourceOutreachId || null,
   });
 
   if (error) {

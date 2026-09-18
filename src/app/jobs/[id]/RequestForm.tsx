@@ -9,7 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export function RequestForm({ jobId, atCap }: { jobId: string; atCap: boolean }) {
+export function RequestForm({
+  jobId,
+  atCap,
+  sourceOutreachId,
+}: {
+  jobId: string;
+  atCap: boolean;
+  /** Set when the seeker got here by accepting somebody's message. */
+  sourceOutreachId?: string;
+}) {
   const [state, action, pending] = useActionState<RequestState, FormData>(requestIntro, { error: null });
 
   if (state.notice) {
@@ -26,6 +35,9 @@ export function RequestForm({ jobId, atCap }: { jobId: string; atCap: boolean })
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="job_id" value={jobId} />
+      {sourceOutreachId ? (
+        <input type="hidden" name="source_outreach_id" value={sourceOutreachId} />
+      ) : null}
 
       <FormError>{state.error}</FormError>
 

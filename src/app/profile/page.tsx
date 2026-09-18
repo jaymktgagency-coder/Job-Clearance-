@@ -10,6 +10,7 @@ import { AiNotice } from "@/components/ai-notice";
 import { ParsedResume, type ParsedResumeShape } from "@/components/parsed-resume";
 import { ProfileForm, ResumeForm, DeleteAccount } from "./ProfileForms";
 import { PictureForm } from "@/components/picture-form";
+import { CompanyInterests, type InterestRow } from "./CompanyInterests";
 import { uploadAvatar, removeAvatar } from "./actions";
 import { AppHeader } from "@/components/app-header";
 import { Button } from "@/components/ui/button";
@@ -23,11 +24,38 @@ export default async function ProfilePage() {
   if (profile.role !== "seeker") redirect("/dashboard");
 
   const supabase = await createClient();
-  const { data: p } = await supabase
-    .from("seeker_profiles")
-    .select("headline, location, bio, years_experience, skills, desired_titles, open_to_work, resume_path, resume_uploaded_at, resume_parsed, resume_parsed_at")
-    .eq("user_id", profile.id)
-    .maybeSingle();
+
+  const [{ data: p }, { data: interestRows }, { data: allCompanies }] = await Promise.all([
+    supabase
+      .from("seeker_profiles")
+      .select("headline, location, bio, years_experience, skills, desired_titles, open_to_work, resume_path, resume_uploaded_at, resume_parsed, resume_parsed_at")
+      .eq("user_id", profile.id)
+      .maybeSingle(),
+    supabase
+      .from("seeker_company_interests")
+      .select("id, company_id, note, companies(name, logo_url)")
+      .eq("seeker_id", profile.id)
+      .order("created_at", { ascending: false }),
+    supabase.from("companies").select("id, name").order("name"),
+  ]);
+
+  const interests: InterestRow[] = (interestRows ?? []).map((row) => {
+    const c = Array.isArray(row.companies) ? row.companies[0] : row.companies;
+    return {
+      id: row.id as string,
+      company_id: row.company_id as string,
+      note: (row.note as string | null) ?? null,
+      company_name: (c?.name as string) ?? "A company",
+      company_logo: (c?.logo_url as string | null) ?? null,
+    };
+  });
+
+  // Only offer what is not already on the list, so adding a duplicate is not
+  // something the screen lets you try and then refuses.
+  const chosen = new Set(interests.map((i) => i.company_id));
+  const addable = (allCompanies ?? [])
+    .filter((c) => !chosen.has(c.id as string))
+    .map((c) => ({ id: c.id as string, name: c.name as string }));
 
   // What the AI took away from the resume, if it has read one yet.
   const parsed = (p?.resume_parsed ?? null) as ParsedResumeShape | null;
@@ -83,6 +111,32 @@ export default async function ProfilePage() {
               desired_titles: (p?.desired_titles ?? []).join(", "),
               open_to_work: p?.open_to_work ?? true,
             }}
+          />
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Companies you want to work at</CardTitle>
+          <CardDescription>
+            This is the one place you can be found rather than doing the
+            finding. Naming a company lets its <strong>verified employees</strong>{" "}
+            see your profile and write to you first.
+            <br />
+            <br />
+            They see your name, picture, headline, location, years of
+            experience, skills and the titles you&apos;re after. They do{" "}
+            <strong>not</strong> see your email address or your resume — those
+            stay private unless you accept someone&apos;s message and ask them
+            for an intro. Remove a company any time and they lose access
+            straight away.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CompanyInterests
+            interests={interests}
+            companies={addable}
+            openToWork={p?.open_to_work ?? true}
           />
         </CardContent>
       </Card>

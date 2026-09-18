@@ -111,15 +111,16 @@ src/
     profile/              jobs/[id]/    requests/     inbox/[id]/
     employer/jobs/[id]/   employer/billing/           api/stripe/webhook/
     employer/company/     voucher/profile/  -- each role's own profile page
+    voucher/seekers/      -- people who named your employer, and reaching out
     terms/ privacy/ refunds/ support/   setup/
     hires/actions.ts      -- separation flow, shared by both sides
   components/  ai-notice, parsed-resume, separation-panel, site-footer, legal/, ui/
                hello-lottie (the greeting), hello-overlay (the post-login moment)
-               avatar, picture-form, job-filters, ui/skeleton
+               avatar, picture-form, job-filters, outreach-panel, ui/skeleton
   assets/      hello-apple.json -- the greeting animation, as downloaded
   lib/
     env.ts legal.ts auth.ts invites.ts email.ts email-domains.ts verification-codes.ts
-    avatars.ts job-filters.ts
+    avatars.ts job-filters.ts outreach.ts
     supabase/{client,server,health,db-status}.ts
     ai/{client,resume-file,parse-resume,score-fit,run}.ts
     stripe/{client,payment-methods}.ts
@@ -130,8 +131,8 @@ scripts/                 seed.mts, ai-backfill.mts
 tests/                   7 browser tests (.mjs) + ai-layer.mts + stripe-9a.mts
 ```
 
-21 tables, 1 view (`voucher_reputation`, security_invoker), 17 enums,
-57 RLS policies.
+23 tables, 1 view (`voucher_reputation`, security_invoker), 18 enums,
+64 RLS policies.
 
 ## The security guards, and why each exists
 
@@ -153,6 +154,9 @@ understanding the attack it stops.
 | 0003 | `guard_payout_release()` | Payout released without identity + tax details |
 | 0011 | `charge_is_settled()` gate in `release_due_payouts()` | A voucher's payout released on day 60 with the employer's fee never collected — Vouch paying out its own money |
 | 0011 | `protect_employer_charge()` | Second lock under the SELECT-only policy: even if an UPDATE policy is ever added, an employer still cannot waive their own bill |
+| 0015 | `protect_outreach_insert()` | A voucher messaging any seeker they liked, rather than only those who named their employer — the line between outreach and scraping. Also: naming someone else's company on the way in |
+| 0015 | `protect_outreach_columns()` | A voucher accepting their own approach on the seeker's behalf, and rewriting the message after it was answered |
+| 0015 | `protect_intro_request_source()` | A seeker dressing an ordinary request up as one that came from an approach that was never made |
 
 Shape they all share: **trusted callers pass through, everyone else is either
 silently reverted or raised at.** Silent revert where a legitimate update is
@@ -261,6 +265,34 @@ beside every name in a list, so signing one per row would be dozens of round
 trips. The protection is an unguessable path (`<user-id>/<uuid>.<ext>`), and
 account deletion erases the file — a public file is still personal data.
 
+**The marketplace runs both ways now.** A seeker names companies
+(`seeker_company_interests`); a verified voucher at one of those companies may
+write to them once (`voucher_outreach`). The match key is
+`verified_voucher_company()` — the same helper four other policies use, so the
+two directions can never disagree about who counts as verified. Accepting does
+not fork the flow: it ends in an ordinary `intro_request`, so every fee, vouch
+and hire guard applies unchanged.
+
+**The voucher's browse list is a column allowlist, not a policy.** RLS is row
+level, so a policy letting a voucher read an interested seeker's `users` row
+would hand over their **email** — and a voucher who can email a seeker can
+arrange a hire with nobody paying anybody. So there is no such policy:
+everything comes from `seekers_interested_in_my_company()`, whose returned
+columns *are* the privacy rule. `resumes_read_as_voucher` still keys on
+`intro_requests`, so a resume stays private until the seeker accepts and asks.
+Test 96 asserts the exact column list — **read from `pg_proc`, not
+`information_schema.columns`, which does not contain function return columns
+at all and made the first version of that check pass while `email` leaked.**
+
+**`open_to_work` is load-bearing now.** It sat on the profile form unread since
+Step 5; it is the global off switch that hides a seeker from every voucher at
+once.
+
+**Outreach expiry is computed on read.** Nothing runs on a schedule, so
+`expire_stale_outreach()` exists unscheduled beside the other two sweepers and
+the *reading* applies the cutoff — otherwise a voucher's cap looks full of
+messages that went stale weeks ago.
+
 **Supabase gotchas:** errors are plain objects, not `Error` — check
 `"message" in error`. `head: true` returns 204 with a null count on a missing
 table; use `.select("id", { count: "exact" }).limit(1)`. Uploading a `Blob`
@@ -311,6 +343,7 @@ failures.
 | `0012_voucher_payout_accounts.sql` | Stripe Connect recipient accounts; paying needs an account Stripe enabled |
 | `0013_profile_pictures.sql` | Public `avatars` bucket. **No new columns** — `users.avatar_url` and `companies.logo_url` existed from 0001 |
 | `0014_job_categories.sql` | `job_categories` lookup table + `jobs.category`; the list is rows, not an enum, so it changes without a migration |
+| `0015_voucher_outreach.sql` | The other direction: `seeker_company_interests`, `voucher_outreach`, and the column-allowlist function that keeps email and resume out of it |
 
 ## Testing
 
@@ -347,9 +380,10 @@ neither can be merged to `main` or exercised end to end.
 
 Still open, in rough priority order:
 
-- **Apply 0013 + 0014 before merging the code that needs them** — the job list
+- **Apply 0013 + 0014 + 0015 before merging the code that needs them** — the job list
   reads `jobs.category` and `job_categories`, and the profile pages upload to
-  the `avatars` bucket. Both are dead without the migration.
+  the `avatars` bucket, and the whole outreach feature is 0015. All three are
+  dead without their migration.
 - **Radius filter is not built.** Category and Location ship; Radius needs
   coordinates nobody has — `locations` stores a text address with no lat/lng,
   and `seeker_profiles.location` is free text. Decide between real ZIP-centroid
