@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { HelloWave } from "@/components/hello-wave";
+import { HelloLottie } from "@/components/hello-lottie";
 import { AppHeader } from "@/components/app-header";
 import { StatusLine } from "@/components/status-mark";
 import { Textarea } from "@/components/ui/textarea";
@@ -172,13 +172,13 @@ export default function DesignPage() {
       </Section>
 
       <Section
-        title="The wave"
-        note="The hello animation, hand-built from shapes rather than downloaded. It arrives, waves four times, and stops — once per page load, never on a loop. Reload this page to see it again."
+        title="The hello"
+        note="The greeting, drawn as though written with a pen. It is a Lottie animation from LottieFiles, tinted to the brand orange and stopped at the moment the word is finished — the original carries on and rubs itself out again, which is wrong for something sitting above a headline. It writes once per page load, never on a loop and never tied to scrolling. Reload this page to see it again."
       >
         <div className="flex flex-wrap items-end gap-10">
-          <HelloWave className="text-brand-500" size={96} />
-          <HelloWave className="text-brand-700" size={56} />
-          <HelloWave className="text-foreground" size={36} />
+          <HelloLottie size={200} />
+          <HelloLottie size={120} speed={2.1} />
+          <HelloLottie size={80} color="#1c1917" />
         </div>
       </Section>
 

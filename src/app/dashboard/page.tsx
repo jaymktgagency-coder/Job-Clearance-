@@ -19,6 +19,7 @@ import { currentUser, currentProfile } from "@/lib/auth";
 import { InviteForm } from "./InviteForm";
 import { AiNotice } from "@/components/ai-notice";
 import { AppHeader } from "@/components/app-header";
+import { HelloOverlay } from "@/components/hello-overlay";
 import { InlineLink } from "@/components/inline-link";
 import { StatusLine } from "@/components/status-mark";
 import { Badge } from "@/components/ui/badge";
@@ -67,17 +68,29 @@ function Stat({
   );
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  // Next 16 hands these over as a promise, so it has to be awaited.
+  searchParams: Promise<{ hello?: string }>;
+}) {
   const user = await currentUser();
   if (!user) redirect("/login");
 
   const profile = await currentProfile();
   if (!profile) redirect("/onboarding");
 
+  // Set by signing in. Plays the "hello" animation over the top of this page
+  // once, then takes itself away. The dashboard below is built and rendered
+  // either way — the greeting never holds it up.
+  const greet = (await searchParams).hello === "1";
+
   const supabase = await createClient();
 
   return (
     <>
+      {greet ? <HelloOverlay /> : null}
+
       <AppHeader profile={profile} />
 
       <main className="mx-auto w-full max-w-5xl px-6 py-10 sm:py-14">

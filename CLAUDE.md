@@ -26,9 +26,13 @@ shapes everything:
 - Write **plain-English comments** explaining what each file does and why.
 - After each step, say exactly how to test it — on the live site, not locally.
 - **Keep dependencies minimal.** Current runtime deps: Next, React, Tailwind,
-  shadcn/Base UI, `@supabase/*`, `@anthropic-ai/sdk`, `stripe`. Adding one is
-  a decision, not a reflex. A ~60-line hand-written zip reader (`resume-file.ts`)
-  was preferred over a docx library.
+  shadcn/Base UI, `@supabase/*`, `@anthropic-ai/sdk`, `stripe`, `lottie-react`.
+  Adding one is a decision, not a reflex. A ~60-line hand-written zip reader
+  (`resume-file.ts`) was preferred over a docx library. `lottie-react` is the
+  one place that call went the other way: the founder asked for a specific
+  published animation, which is a data file no amount of hand-written SVG can
+  be, so it needs a player. It is imported as `LottieSvg`, the smallest of the
+  three builds it ships.
 - If something in their spec is technically wrong, **say so once**, then do it
   their way if they confirm.
 - **Ask rather than guess** when genuinely ambiguous.
@@ -109,6 +113,8 @@ src/
     terms/ privacy/ refunds/ support/   setup/
     hires/actions.ts      -- separation flow, shared by both sides
   components/  ai-notice, parsed-resume, separation-panel, site-footer, legal/, ui/
+               hello-lottie (the greeting), hello-overlay (the post-login moment)
+  assets/      hello-apple.json -- the greeting animation, as downloaded
   lib/
     env.ts legal.ts auth.ts invites.ts email.ts email-domains.ts verification-codes.ts
     supabase/{client,server,health,db-status}.ts
