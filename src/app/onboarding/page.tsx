@@ -15,12 +15,21 @@ import { AuthShell } from "@/components/auth-shell";
 
 export const dynamic = "force-dynamic";
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  // Next 16 hands these over as a promise, so it has to be awaited.
+  searchParams: Promise<{ hello?: string }>;
+}) {
   const user = await currentUser();
   if (!user) redirect("/login");
 
+  // Signing in lands here first, so the greeting flag arrives here and has to
+  // be carried the rest of the way to the dashboard.
+  const greet = (await searchParams).hello === "1";
+
   // Already done? Straight through.
-  if (await currentProfile()) redirect("/dashboard");
+  if (await currentProfile()) redirect(greet ? "/dashboard?hello=1" : "/dashboard");
 
   const role = pendingRole(user.user_metadata);
   if (!role) redirect("/signup");

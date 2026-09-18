@@ -83,7 +83,13 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
   if (error) return { error: friendly(error.message) };
 
   // Onboarding sends people straight on to their dashboard if they're done.
-  redirect("/onboarding");
+  //
+  // `?hello=1` is the signal that this arrival is a fresh sign-in, so the
+  // dashboard knows to play the "hello" animation over itself once. It is a
+  // visible marker in the address bar rather than something hidden, which
+  // makes it testable: adding ?hello=1 to the dashboard URL by hand replays
+  // the greeting. It grants nothing and is thrown away as soon as it is used.
+  redirect("/onboarding?hello=1");
 }
 
 export async function signOut(): Promise<void> {

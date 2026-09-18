@@ -6,15 +6,15 @@
  * share one. They get the same width, the same spacing, the same way back to
  * the home page, and the same card.
  *
- * `greet` puts the waving hand above the title. It is on for signing in and
- * signing up — the two doors into the product — and off for the steps in the
- * middle, where you have already been greeted and are trying to finish
+ * `greet` puts the "hello" animation above the title. It is on for signing
+ * in and signing up — the two doors into the product — and off for the steps
+ * in the middle, where you have already been greeted and are trying to finish
  * something.
  */
 
 import Link from "next/link";
 
-import { HelloWave } from "@/components/hello-wave";
+import { HelloLottie } from "@/components/hello-lottie";
 import { Card, CardContent } from "@/components/ui/card";
 
 export function AuthShell({
@@ -40,7 +40,7 @@ export function AuthShell({
       </Link>
 
       <div className="mt-10">
-        {greet ? <HelloWave className="mb-5 text-brand-500" size={52} /> : null}
+        {greet ? <HelloLottie className="mb-5" size={150} /> : null}
 
         <h1 className="text-3xl font-semibold text-balance sm:text-4xl">
           {title}
