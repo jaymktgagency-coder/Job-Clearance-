@@ -7,6 +7,7 @@
 
 import { useActionState } from "react";
 import { inviteVoucher, type InviteState } from "./actions";
+import { FormError } from "@/components/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,19 +19,20 @@ export function InviteForm({ canInvite }: { canInvite: boolean }) {
 
   return (
     <form action={action} className="space-y-3">
-      {state.error ? (
-        <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {state.error}
-        </p>
-      ) : null}
+      <FormError>{state.error}</FormError>
 
       {state.link ? (
-        <div className="rounded-md border p-3 text-sm">
-          <p className="font-medium">Invitation ready for {state.email}</p>
-          <p className="mt-1 text-muted-foreground">
+        <div role="status" className="rounded-lg bg-brand-50 p-4 text-sm">
+          <p className="font-semibold text-brand-900">
+            Invitation ready for {state.email}
+          </p>
+          <p className="mt-1 text-brand-800">
             Send them this link. It works once and expires in 14 days.
           </p>
-          <code className="mt-2 block break-all rounded bg-muted px-2 py-1 text-xs">
+          {/* Selectable, wrapping, and in the mono face — this is the one
+              place in the product where a person has to copy a long string
+              by hand without dropping a character. */}
+          <code className="mt-3 block rounded-md bg-card px-3 py-2 font-mono text-xs break-all select-all">
             {state.link}
           </code>
         </div>
@@ -48,8 +50,8 @@ export function InviteForm({ canInvite }: { canInvite: boolean }) {
         />
       </div>
 
-      <Button type="submit" disabled={pending || !canInvite}>
-        {pending ? "Creating link..." : "Create invitation link"}
+      <Button type="submit" loading={pending} disabled={!canInvite}>
+        Create invitation link
       </Button>
     </form>
   );

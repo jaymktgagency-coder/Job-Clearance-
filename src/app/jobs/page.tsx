@@ -6,9 +6,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { currentProfile } from "@/lib/auth";
+import { AppHeader } from "@/components/app-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
@@ -48,26 +49,24 @@ export default async function JobsPage() {
   const openCount = (mine ?? []).filter((r) => r.status === "pending").length;
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-12">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight">Open roles</h1>
-        <div className="flex gap-2">
+    <>
+      <AppHeader profile={profile} />
+
+      <main className="mx-auto w-full max-w-4xl px-6 py-10 sm:py-14">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-3xl font-semibold sm:text-4xl">Open roles</h1>
           {profile.role === "seeker" ? (
-            <Button variant="outline" size="sm" render={<Link href="/requests" />}>
+            <Button variant="outline" render={<Link href="/requests" />}>
               My requests ({openCount}/5)
             </Button>
           ) : null}
-          <Button variant="ghost" size="sm" render={<Link href="/dashboard" />}>
-            Dashboard
-          </Button>
         </div>
-      </div>
-      <p className="mt-2 text-muted-foreground">
-        {jobs?.length ?? 0} roles hiring through Vouch. Ask for an intro and a
-        verified employee there decides whether to vouch for you.
-      </p>
+        <p className="measure mt-3 text-lg text-muted-foreground">
+          {jobs?.length ?? 0} roles hiring through Vouch. Ask for an intro and a
+          verified employee there decides whether to vouch for you.
+        </p>
 
-      <div className="mt-8 space-y-4">
+        <div className="mt-10 space-y-4">
         {(jobs ?? []).map((job) => {
           const company = Array.isArray(job.companies) ? job.companies[0] : job.companies;
           const location = Array.isArray(job.locations) ? job.locations[0] : job.locations;
@@ -75,30 +74,46 @@ export default async function JobsPage() {
           const money = pay(job);
 
           return (
-            <Card key={job.id as string}>
+            <Card key={job.id as string} interactive className="group">
               <CardHeader>
-                <CardTitle className="text-base">
-                  <Link href={`/jobs/${job.id}`} className="underline-offset-4 hover:underline">
+                <CardTitle className="text-lg">
+                  {/* The whole card is the target, not just the words — the
+                      stretched link covers it so a thumb can land anywhere. */}
+                  <Link
+                    href={`/jobs/${job.id}`}
+                    className="after:absolute after:inset-0 after:content-[''] group-hover/card:text-brand-800"
+                  >
                     {job.title as string}
                   </Link>
                 </CardTitle>
-                <CardDescription className="flex flex-wrap items-center gap-2">
-                  <span>{company?.name}</span>
-                  {company?.verification_tier && company.verification_tier !== "none" ? (
-                    <Badge variant="secondary">{TIER_LABEL[company.verification_tier]}</Badge>
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">
+                    {company?.name}
+                  </span>
+                  {company?.verification_tier &&
+                  company.verification_tier !== "none" ? (
+                    <Badge variant="soft">
+                      {TIER_LABEL[company.verification_tier]}
+                    </Badge>
                   ) : null}
                   {location?.label ? (
-                    <span className="text-muted-foreground">
+                    <span>
                       · {location.label}
                       {location.city ? `, ${location.city}` : ""}
                     </span>
                   ) : null}
-                </CardDescription>
+                </p>
               </CardHeader>
               <CardContent className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-muted-foreground">{money ?? "Pay not listed"}</p>
+                <p className="tabular text-sm font-semibold">
+                  {money ?? (
+                    <span className="font-normal text-muted-foreground">
+                      Pay not listed
+                    </span>
+                  )}
+                </p>
                 {status ? (
-                  <Badge variant="outline">
+                  <Badge variant={status === "vouched" ? "success" : "outline"}>
                     {status === "pending"
                       ? "Intro requested"
                       : status === "vouched"
@@ -106,21 +121,28 @@ export default async function JobsPage() {
                         : status}
                   </Badge>
                 ) : (
-                  <Button size="sm" render={<Link href={`/jobs/${job.id}`} />}>
-                    Ask for an intro
-                  </Button>
+                  <span className="text-sm font-semibold text-brand-700">
+                    Ask for an intro →
+                  </span>
                 )}
               </CardContent>
             </Card>
           );
         })}
 
-        {(jobs ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No open roles right now. Check back soon.
-          </p>
-        ) : null}
-      </div>
-    </main>
+          {(jobs ?? []).length === 0 ? (
+            <Card>
+              <CardContent className="py-6 text-center">
+                <p className="font-semibold">No open roles right now.</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  New roles appear here as employers post them. Nothing is
+                  scraped, so everything you see was posted by a real company.
+                </p>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      </main>
+    </>
   );
 }

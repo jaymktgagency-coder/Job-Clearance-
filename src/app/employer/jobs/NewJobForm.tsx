@@ -8,10 +8,14 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { CoinsIcon } from "lucide-react";
 import { createJob, type JobState } from "../actions";
+import { FormError } from "@/components/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 export function NewJobForm({
   locations,
@@ -27,11 +31,7 @@ export function NewJobForm({
 
   return (
     <form action={action} className="space-y-5">
-      {state.error ? (
-        <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {state.error}
-        </p>
-      ) : null}
+      <FormError>{state.error}</FormError>
 
       <div className="space-y-2">
         <Label htmlFor="title">Job title</Label>
@@ -40,12 +40,11 @@ export function NewJobForm({
 
       <div className="space-y-2">
         <Label htmlFor="description">What the job involves</Label>
-        <textarea
+        <Textarea
           id="description"
           name="description"
           rows={5}
           required
-          className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm"
           placeholder="Shifts, what a good week looks like, what you'll train and what you need them to arrive with."
         />
         <p className="text-sm text-muted-foreground">
@@ -54,22 +53,22 @@ export function NewJobForm({
       </div>
 
       <fieldset className="space-y-3">
-        <legend className="mb-2 text-sm font-medium">How is it paid?</legend>
-        <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-4 has-checked:border-primary has-checked:bg-muted/50">
-          <input type="radio" name="pay_type" value="hourly" className="mt-1" required
+        <legend className="mb-2 text-sm font-semibold">How is it paid?</legend>
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card p-4 transition-[border-color,background-color,box-shadow] duration-[160ms] ease-out hover:border-brand-300 hover:bg-brand-50/50 has-checked:border-brand-500 has-checked:bg-brand-50 has-checked:shadow-raised">
+          <input type="radio" name="pay_type" value="hourly" className="mt-0.5 size-4 accent-brand-500" required
                  onChange={() => setPayType("hourly")} />
           <span>
-            <span className="block text-sm font-medium">Hourly</span>
+            <span className="block text-sm font-semibold">Hourly</span>
             <span className="block text-sm text-muted-foreground">
               Retail, hospitality, warehouse, care — anything paid by the hour.
             </span>
           </span>
         </label>
-        <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-4 has-checked:border-primary has-checked:bg-muted/50">
-          <input type="radio" name="pay_type" value="salaried" className="mt-1" required
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card p-4 transition-[border-color,background-color,box-shadow] duration-[160ms] ease-out hover:border-brand-300 hover:bg-brand-50/50 has-checked:border-brand-500 has-checked:bg-brand-50 has-checked:shadow-raised">
+          <input type="radio" name="pay_type" value="salaried" className="mt-0.5 size-4 accent-brand-500" required
                  onChange={() => setPayType("salaried")} />
           <span>
-            <span className="block text-sm font-medium">Salaried</span>
+            <span className="block text-sm font-semibold">Salaried</span>
             <span className="block text-sm text-muted-foreground">
               A yearly salary rather than an hourly rate.
             </span>
@@ -77,14 +76,29 @@ export function NewJobForm({
         </label>
       </fieldset>
 
+      {/* The fee, stated before they post rather than after. It is read live
+          from platform_settings by the page above, never hardcoded here. */}
       {payType ? (
-        <p className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
-          <strong className="font-medium">
-            You&apos;ll pay {payType === "hourly" ? tier1 : tier2} — but only if you hire someone.
-          </strong>{" "}
-          Half goes to whoever vouched for them, released 60 days after they
-          start. Nothing is charged for posting, and nothing if you don&apos;t hire.
-        </p>
+        <div
+          role="status"
+          className="flex items-start gap-3 rounded-lg bg-brand-50 p-4 text-sm text-brand-900"
+        >
+          <CoinsIcon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <div>
+            <p className="font-semibold">
+              You&apos;ll pay{" "}
+              <span className="tabular">
+                {payType === "hourly" ? tier1 : tier2}
+              </span>{" "}
+              — but only if you hire someone.
+            </p>
+            <p className="mt-1 text-brand-800">
+              Half goes to whoever vouched for them, released 60 days after they
+              start. Nothing is charged for posting, and nothing if you
+              don&apos;t hire.
+            </p>
+          </div>
+        </div>
       ) : null}
 
       <div className="grid gap-5 sm:grid-cols-2">
@@ -103,20 +117,21 @@ export function NewJobForm({
       {locations.length > 0 ? (
         <div className="space-y-2">
           <Label htmlFor="location_id">Where is it?</Label>
-          <select id="location_id" name="location_id" defaultValue=""
-                  className="h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm">
+          <Select id="location_id" name="location_id" defaultValue="">
             <option value="">No particular location</option>
             {locations.map((l) => (
-              <option key={l.id} value={l.id}>{l.label}</option>
+              <option key={l.id} value={l.id}>
+                {l.label}
+              </option>
             ))}
-          </select>
+          </Select>
         </div>
       ) : null}
 
-      <label className="flex cursor-pointer items-start gap-3 rounded-md border p-4">
-        <input type="checkbox" name="publish" defaultChecked className="mt-1" />
+      <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card p-4 transition-[border-color,background-color,box-shadow] duration-[160ms] ease-out hover:border-brand-300 hover:bg-brand-50/50 has-checked:border-brand-500 has-checked:bg-brand-50 has-checked:shadow-raised">
+        <input type="checkbox" name="publish" defaultChecked className="mt-0.5 size-4 accent-brand-500" />
         <span className="text-sm">
-          <span className="block font-medium">Publish it now</span>
+          <span className="block font-semibold">Publish it now</span>
           <span className="mt-1 block text-muted-foreground">
             Seekers can see it and ask for intros straight away. Untick to save it
             as a draft.
@@ -124,8 +139,8 @@ export function NewJobForm({
         </span>
       </label>
 
-      <Button type="submit" disabled={pending}>
-        {pending ? "Posting..." : "Post this role"}
+      <Button type="submit" size="lg" loading={pending}>
+        Post this role
       </Button>
     </form>
   );

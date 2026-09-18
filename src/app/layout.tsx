@@ -6,18 +6,40 @@
  */
 
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Outfit, DM_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteFooter } from "@/components/site-footer";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+/**
+ * Three typefaces, each with one job.
+ *
+ * Outfit is the voice — headlines and page titles. It is geometric and has
+ * real character at large sizes, which the default system font does not.
+ * DM Sans is the workhorse — every paragraph, label, form field and table.
+ * It stays legible at 14px, which Outfit does not.
+ * Geist Mono is for money and dates only, where digits must line up.
+ *
+ * Next downloads and self-hosts these at build time, so no request ever
+ * leaves for Google when a visitor loads the site. `display: "swap"` means
+ * text is readable immediately in a fallback face rather than invisible
+ * while a font downloads.
+ */
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 // The text shown in the browser tab and in link previews.
@@ -31,7 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${outfit.variable} ${dmSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {children}

@@ -6,12 +6,13 @@
  * your Supabase project is actually answering. It's a checklist you can see.
  *
  * This is a "server component": the checking happens on the server, so your
- * secret keys are never sent to the browser. Only the ✅/❌ result is.
+ * secret keys are never sent to the browser. Only the pass/fail result is.
  */
 
 import { checkEnv } from "@/lib/env";
 import { checkSupabaseConnection } from "@/lib/supabase/health";
 import { checkDatabase } from "@/lib/supabase/db-status";
+import { StatusMark } from "@/components/status-mark";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -53,27 +54,32 @@ export default async function SetupPage() {
             )}
           </CardTitle>
           <CardDescription>
-            Everything below needs a ✅ before the app can show you anything
+            Everything below needs a tick before the app can show you anything
             real.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex items-start gap-3 rounded-md border p-4">
-            <span aria-hidden className="text-lg leading-none">
-              {connection.ok ? "✅" : "❌"}
-            </span>
+          <div className="flex items-start gap-3 rounded-lg bg-sunken p-4">
+            <StatusMark state={connection.ok ? "done" : "failed"} className="mt-0.5" />
             <div>
-              <p className="font-medium">Supabase connection</p>
+              <p className="font-semibold">Supabase connection</p>
               <p className="text-sm text-muted-foreground">{connection.message}</p>
             </div>
           </div>
           {/* Step 2a: are the tables there, and is there anything in them? */}
-          <div className="flex items-start gap-3 rounded-md border p-4">
-            <span aria-hidden className="text-lg leading-none">
-              {database.companies > 0 ? "✅" : database.schemaApplied ? "⚠️" : "❌"}
-            </span>
+          <div className="flex items-start gap-3 rounded-lg bg-sunken p-4">
+            <StatusMark
+              state={
+                database.companies > 0
+                  ? "done"
+                  : database.schemaApplied
+                    ? "attention"
+                    : "failed"
+              }
+              className="mt-0.5"
+            />
             <div>
-              <p className="font-medium">Database tables and demo data</p>
+              <p className="font-semibold">Database tables and demo data</p>
               <p className="text-sm text-muted-foreground">{database.message}</p>
             </div>
           </div>
@@ -92,11 +98,12 @@ export default async function SetupPage() {
           {results.map((item) => (
             <div
               key={item.name}
-              className="flex items-start gap-3 rounded-md border p-4"
+              className="flex items-start gap-3 rounded-lg bg-sunken p-4"
             >
-              <span aria-hidden className="text-lg leading-none">
-                {item.set ? "✅" : item.requiredNow ? "❌" : "⚪️"}
-              </span>
+              <StatusMark
+                state={item.set ? "done" : item.requiredNow ? "failed" : "waiting"}
+                className="mt-0.5"
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <code className="text-sm font-medium break-all">{item.name}</code>

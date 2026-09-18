@@ -19,14 +19,20 @@ const LINKS = [
 
 export function SiteFooter() {
   return (
-    <footer className="mt-auto border-t">
-      <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-3 px-6 py-6 text-sm text-muted-foreground">
-        <p>
-          {LEGAL.serviceName} — free for job seekers, always.
-        </p>
-        <nav className="flex flex-wrap gap-4">
+    <footer className="mt-auto border-t border-border">
+      <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-8 text-sm text-muted-foreground">
+        <p>{LEGAL.serviceName} — free for job seekers, always.</p>
+        <nav className="flex flex-wrap gap-x-5 gap-y-2">
           {LINKS.map((l) => (
-            <Link key={l.href} href={l.href} className="underline-offset-4 hover:underline">
+            <Link
+              key={l.href}
+              href={l.href}
+              /* The text stays the size it looks; the TAP TARGET is padded
+                 out to 44px. These measured 20px tall, which is a miss
+                 waiting to happen on a tablet. The negative margin keeps the
+                 row looking the same as before. */
+              className="-mx-1.5 -my-2 inline-flex min-h-11 items-center px-1.5 underline-offset-[0.2em] transition-colors duration-[160ms] ease-out hover:text-brand-700 hover:underline"
+            >
               {l.label}
             </Link>
           ))}

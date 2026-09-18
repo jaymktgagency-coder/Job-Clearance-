@@ -40,6 +40,11 @@ They check, against a real Postgres database, that:
 - a bank debit still in flight does not count as money arrived
 - an employer cannot waive, delete, or mark their own fee paid — checked
   against BOTH locks, row-level security and the trigger behind it
+- a voucher cannot name their own payout account, switch on their own
+  payouts, or declare their own identity verified — at creation or after
+- releasing a payout needs identity and tax; PAYING one additionally needs a
+  payout account Stripe has actually enabled
+- a voucher cannot rewrite what they are owed
 - deleting a company still takes its charge rows with it. A BEFORE DELETE
   trigger that returns NEW returns null, which cancels the delete and orphans
   the money row; this check fails against that version and passes against the
@@ -67,6 +72,7 @@ psql -d yourtestdb -v ON_ERROR_STOP=1 \
   -f supabase/migrations/0009_separation_and_hire_integrity.sql \
   -f supabase/migrations/0010_payment_methods_and_company_trust.sql \
   -f supabase/migrations/0011_collect_the_fee.sql \
+  -f supabase/migrations/0012_voucher_payout_accounts.sql \
   -f supabase/tests/10_database_rules.sql \
   -f supabase/tests/20_caps_and_privacy.sql \
   -f supabase/tests/30_money_and_reputation.sql \
@@ -74,11 +80,12 @@ psql -d yourtestdb -v ON_ERROR_STOP=1 \
   -f supabase/tests/50_ai_is_advisory.sql \
   -f supabase/tests/60_separation_and_integrity.sql \
   -f supabase/tests/70_company_trust.sql \
-  -f supabase/tests/80_collect_the_fee.sql
+  -f supabase/tests/80_collect_the_fee.sql \
+  -f supabase/tests/90_voucher_payout_accounts.sql
 ```
 
-All 100 checks print `PASS`, and the run ends with
-`80_collect_the_fee.sql: all checks passed`. Any failure stops the
+All 113 checks print `PASS`, and the run ends with
+`90_voucher_payout_accounts.sql: all checks passed`. Any failure stops the
 run. `60_` builds its own company and people, so it also passes on its own.
 
 `00_supabase_stubs.sql` fakes the small parts of Supabase the migrations rely

@@ -7,7 +7,9 @@
 
 import { useActionState } from "react";
 import { completeOnboarding, type OnboardingState } from "./actions";
+import { FormError } from "@/components/form-message";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -31,14 +33,7 @@ export function OnboardingForm({
     <form action={action} className="space-y-6">
       <input type="hidden" name="role" value={role} />
 
-      {state.error ? (
-        <p
-          role="alert"
-          className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {state.error}
-        </p>
-      ) : null}
+      <FormError>{state.error}</FormError>
 
       <div className="space-y-2">
         <Label htmlFor="full_name">Your name</Label>
@@ -71,11 +66,13 @@ export function OnboardingForm({
             <Label htmlFor="website">Website (optional)</Label>
             <Input id="website" name="website" placeholder="https://" />
           </div>
-          <p className="rounded-md border p-3 text-sm text-muted-foreground">
+          <p className="rounded-lg bg-brand-50 p-4 text-sm text-brand-900">
             You&apos;ll add a payment method and business registration later to earn
-            a <strong>Verified Business</strong> badge. Proving your email domain
-            on top of that earns <strong>Verified Domain</strong>, which lets your
-            staff verify themselves with a work email.
+            a <strong className="font-semibold">Verified Business</strong> badge.
+            Proving your email domain on top of that earns{" "}
+            <strong className="font-semibold">Verified Domain</strong>, which lets
+            your staff verify themselves with a work email. A business on Gmail is
+            never second-class here.
           </p>
         </>
       ) : null}
@@ -83,9 +80,9 @@ export function OnboardingForm({
       {role === "voucher" ? (
         <>
           {invitedCompany ? (
-            <div className="rounded-md border p-4 text-sm">
-              <p className="font-medium">{invitedCompany}</p>
-              <p className="mt-1 text-muted-foreground">
+            <div className="rounded-lg bg-brand-50 p-4 text-sm">
+              <p className="font-semibold text-brand-900">{invitedCompany}</p>
+              <p className="mt-1 text-brand-800">
                 They invited you, so you&apos;re all set — no work email needed. You&apos;ll
                 be able to vouch as soon as you finish here.
               </p>
@@ -94,13 +91,7 @@ export function OnboardingForm({
             <>
               <div className="space-y-2">
                 <Label htmlFor="company_id">Where do you work?</Label>
-                <select
-                  id="company_id"
-                  name="company_id"
-                  required
-                  className="h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-                  defaultValue=""
-                >
+                <Select id="company_id" name="company_id" required defaultValue="">
                   <option value="" disabled>
                     Choose your employer
                   </option>
@@ -109,7 +100,7 @@ export function OnboardingForm({
                       {c.name}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <p className="text-sm text-muted-foreground">
                   Don&apos;t see your employer? Ask them to invite you — that works even
                   if they don&apos;t have their own email domain.
@@ -131,10 +122,15 @@ export function OnboardingForm({
             <Input id="job_title" name="job_title" placeholder="Shift Supervisor" />
           </div>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-md border p-4">
-            <input type="checkbox" name="employer_permission" className="mt-1" required />
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card p-4 transition-[border-color,background-color,box-shadow] duration-[160ms] ease-out hover:border-brand-300 hover:bg-brand-50/50 has-checked:border-brand-500 has-checked:bg-brand-50 has-checked:shadow-raised">
+            <input
+              type="checkbox"
+              name="employer_permission"
+              className="mt-0.5 size-4 accent-brand-500"
+              required
+            />
             <span className="text-sm">
-              <span className="block font-medium">
+              <span className="block font-semibold">
                 My employer allows me to take part in Vouch.
               </span>
               <span className="mt-1 block text-muted-foreground">
@@ -146,8 +142,8 @@ export function OnboardingForm({
         </>
       ) : null}
 
-      <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Setting things up..." : "Finish setting up"}
+      <Button type="submit" size="lg" loading={pending} className="w-full">
+        Finish setting up
       </Button>
     </form>
   );

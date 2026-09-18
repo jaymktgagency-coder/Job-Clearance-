@@ -11,7 +11,8 @@
     "test:ai": "node --experimental-strip-types --import ./tests/resolve-ts.mjs --env-file=.env.local tests/ai-layer.mts",
     "ai:backfill": "node --experimental-strip-types --import ./tests/resolve-ts.mjs --env-file=.env.local scripts/ai-backfill.mts",
     "test:stripe": "node --experimental-strip-types --import ./tests/resolve-ts.mjs --env-file=.env.local tests/stripe-9a.mts",
-    "test:9b": "node --experimental-strip-types --import ./tests/resolve-ts.mjs --env-file=.env.local tests/stripe-9b.mts"
+    "test:9b": "node --experimental-strip-types --import ./tests/resolve-ts.mjs --env-file=.env.local tests/stripe-9b.mts",
+    "test:9c": "node --experimental-strip-types --import ./tests/resolve-ts.mjs --env-file=.env.local tests/stripe-9c.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",

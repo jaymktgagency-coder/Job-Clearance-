@@ -78,6 +78,9 @@ future change can quietly drop them.
 11. **No money leaves until money arrived.** A voucher's payout will not
     release against an unpaid fee — not even on day 60. A bank debit still in
     flight does not count as arrived.
+12. **Vouch never holds a voucher's bank details, date of birth, or tax
+    number.** Stripe collects and keeps all of it, and files the 1099s. Vouch
+    stores an account identifier and two dates.
 10. **The AI is told what not to weigh.** Age, sex, race, nationality,
     religion, disability and family status are excluded, and so are school
     prestige, employment gaps, and how polished the writing is. Hourly work
@@ -167,6 +170,7 @@ src/
     inbox/                The voucher's requests, and writing a vouch
     employer/jobs/        Posting roles and working the candidate list
     employer/billing/     Saving a card or bank account, via Stripe's own page
+    voucher/payouts/      A voucher's earnings, and where they get paid
     api/stripe/webhook/   Stripe telling us a payment method was saved
     hires/actions.ts      Recording that a job ended, from either side
     terms/ privacy/       The legal pages Stripe's review looks for
@@ -190,6 +194,7 @@ src/
     stripe/client.ts      The Stripe connection, and the on/off switch
     stripe/payment-methods.ts  Saving an employer's card or bank account
     stripe/charges.ts     Collecting the fee — the only place money is taken
+    stripe/connect.ts     The account a voucher gets paid into
     supabase/client.ts    Supabase connection for browser code
     supabase/server.ts    Supabase connection for server code (+ admin version)
     supabase/health.ts    Connection test used by /setup
@@ -198,8 +203,8 @@ src/
     verification-codes.ts The 6-digit code: making it, hashing it, expiring it
   proxy.ts                Runs before every request; keeps logins alive
 supabase/
-  migrations/             SQL applied to Supabase, in order (0001 - 0011)
-  tests/                  100 checks that prove the rules above still hold
+  migrations/             SQL applied to Supabase, in order (0001 - 0012)
+  tests/                  113 checks that prove the rules above still hold
 scripts/
   seed.mts                Fills the database with demo data
   ai-backfill.mts         Reads and scores anything the AI hasn't seen yet

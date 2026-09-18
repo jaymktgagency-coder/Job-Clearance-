@@ -11,8 +11,8 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
 import { signUp, type FormState } from "../actions";
+import { FormError, FormNotice } from "@/components/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,27 +50,15 @@ export function RoleForm({
     <form action={action} className="space-y-6">
       {inviteToken ? <input type="hidden" name="invite_token" value={inviteToken} /> : null}
 
-      {state.error ? (
-        <p
-          role="alert"
-          className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {state.error}
-        </p>
-      ) : null}
-
-      {state.notice ? (
-        <p className="rounded-md border px-3 py-2 text-sm text-muted-foreground">
-          {state.notice}
-        </p>
-      ) : null}
+      <FormError>{state.error}</FormError>
+      <FormNotice>{state.notice}</FormNotice>
 
       <fieldset className="space-y-3">
-        <legend className="mb-3 text-sm font-medium">How will you use Vouch?</legend>
+        <legend className="mb-3 text-sm font-semibold">How will you use Vouch?</legend>
         {ROLES.map((r) => (
           <label
             key={r.value}
-            className="flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors has-checked:border-primary has-checked:bg-muted/50"
+            className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card p-4 transition-[border-color,background-color,box-shadow] duration-[160ms] ease-out hover:border-brand-300 hover:bg-brand-50/50 has-checked:border-brand-500 has-checked:bg-brand-50 has-checked:shadow-raised"
           >
             <input
               type="radio"
@@ -78,13 +66,13 @@ export function RoleForm({
               value={r.value}
               defaultChecked={invitedCompany ? r.value === "voucher" : undefined}
               required
-              className="mt-1"
+              className="mt-1 size-4 accent-brand-500"
             />
             <span className="min-w-0">
-              <span className="block text-sm font-medium">{r.title}</span>
+              <span className="block text-sm font-semibold">{r.title}</span>
               <span className="block text-sm text-muted-foreground">{r.blurb}</span>
               {invitedCompany && r.value === "voucher" ? (
-                <span className="mt-2 block text-sm font-medium text-primary">
+                <span className="mt-2 block text-sm font-semibold text-brand-700">
                   {invitedCompany} invited you — we&apos;ll set this up for you.
                 </span>
               ) : null}
@@ -111,16 +99,9 @@ export function RoleForm({
         <p className="text-sm text-muted-foreground">At least 6 characters.</p>
       </div>
 
-      <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Creating your account..." : "Create account"}
+      <Button type="submit" size="lg" loading={pending} className="w-full">
+        Create account
       </Button>
-
-      <p className="text-sm text-muted-foreground">
-        Already have an account?{" "}
-        <Link href="/login" className="underline underline-offset-4">
-          Sign in
-        </Link>
-      </p>
     </form>
   );
 }

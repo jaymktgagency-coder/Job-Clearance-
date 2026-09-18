@@ -6,20 +6,23 @@
 
 import { useActionState, useState } from "react";
 import { saveProfile, uploadResume, removeResume, deleteAccount, type ProfileState } from "./actions";
+import { FormError } from "@/components/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 function Feedback({ state }: { state: ProfileState }) {
-  if (state.error) {
-    return (
-      <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-        {state.error}
-      </p>
-    );
-  }
+  if (state.error) return <FormError>{state.error}</FormError>;
   if (!state.notice) return null;
-  return <p className="rounded-md border px-3 py-2 text-sm text-muted-foreground">{state.notice}</p>;
+  return (
+    <p
+      role="status"
+      className="rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
+    >
+      {state.notice}
+    </p>
+  );
 }
 
 export type ProfileValues = {
@@ -78,28 +81,27 @@ export function ProfileForm({ values }: { values: ProfileValues }) {
 
       <div className="space-y-2">
         <Label htmlFor="bio">Anything else worth knowing</Label>
-        <textarea
+        <Textarea
           id="bio"
           name="bio"
           rows={4}
           defaultValue={values.bio}
-          className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm"
           placeholder="A few sentences. This is what a voucher reads before deciding whether to back you."
         />
       </div>
 
-      <label className="flex cursor-pointer items-start gap-3 rounded-md border p-4">
-        <input type="checkbox" name="open_to_work" defaultChecked={values.open_to_work} className="mt-1" />
+      <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card p-4 transition-[border-color,background-color,box-shadow] duration-[160ms] ease-out hover:border-brand-300 hover:bg-brand-50/50 has-checked:border-brand-500 has-checked:bg-brand-50 has-checked:shadow-raised">
+        <input type="checkbox" name="open_to_work" defaultChecked={values.open_to_work} className="mt-0.5 size-4 accent-brand-500" />
         <span className="text-sm">
-          <span className="block font-medium">I&apos;m open to work right now</span>
+          <span className="block font-semibold">I&apos;m open to work right now</span>
           <span className="mt-1 block text-muted-foreground">
             Turn this off and you stay on Vouch, but stop appearing to vouchers.
           </span>
         </span>
       </label>
 
-      <Button type="submit" disabled={pending}>
-        {pending ? "Saving..." : "Save profile"}
+      <Button type="submit" size="lg" loading={pending}>
+        Save profile
       </Button>
     </form>
   );
@@ -119,9 +121,9 @@ export function ResumeForm({
       <Feedback state={state} />
 
       {resumePath ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-4">
-          <div className="text-sm">
-            <p className="font-medium">{resumePath.split("/").pop()}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-sunken p-4">
+          <div className="min-w-0 text-sm">
+            <p className="truncate font-semibold">{resumePath.split("/").pop()}</p>
             <p className="text-muted-foreground">
               Uploaded {uploadedAt ? new Date(uploadedAt).toLocaleDateString() : "recently"}
             </p>
@@ -148,8 +150,8 @@ export function ResumeForm({
           />
           <p className="text-sm text-muted-foreground">PDF, Word, or plain text. Up to 5 MB.</p>
         </div>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Uploading..." : resumePath ? "Replace resume" : "Upload resume"}
+        <Button type="submit" loading={pending}>
+          {resumePath ? "Replace resume" : "Upload resume"}
         </Button>
       </form>
     </div>
@@ -160,8 +162,8 @@ export function DeleteAccount() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-md border border-destructive/30 p-4">
-      <p className="text-sm font-medium">Delete my account</p>
+    <div className="rounded-lg bg-destructive/6 p-4">
+      <p className="text-sm font-semibold text-destructive">Delete my account</p>
       <p className="mt-1 text-sm text-muted-foreground">
         This erases your profile, your resume file, and every intro request and
         vouch attached to you. It cannot be undone.

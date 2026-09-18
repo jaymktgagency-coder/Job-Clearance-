@@ -1,15 +1,65 @@
+/**
+ * globals.css — the single place every colour, shadow, curve and radius in
+ * Vouch is defined. Nothing else in the app should hard-code a colour.
+ *
+ * Plain English: this file is the paint tin. Change a value here and it
+ * changes everywhere at once, on all 21 screens. That is the whole point —
+ * you never have to ask a developer to "make the orange a bit deeper" in
+ * forty different files.
+ *
+ * Colours are written in OKLCH, which is just a modern way of writing a
+ * colour as three numbers: how light it is, how colourful it is, and which
+ * hue it is. It matters because it lets us build an orange scale where each
+ * step looks evenly spaced to the eye. Old-style hex codes don't do that.
+ */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
+/* ---------------------------------------------------------------------------
+   THE ORANGE
+   ---------------------------------------------------------------------------
+   Ten steps from barely-there to almost-brown. Every one was checked against
+   the sRGB gamut, which is the range of colour a normal screen can actually
+   show. Steps that sit outside it get silently flattened by the browser into
+   something duller than you asked for — so these are all deliberately inside.
+
+   The two steps that matter most:
+
+     --brand-500  the loud one. Buttons, the logo mark, anything that should
+                  grab you. We put NEAR-BLACK text on it, not white. White on
+                  bright orange is only 2.6:1 contrast, which fails the legal
+                  accessibility floor of 4.5:1 and is genuinely hard to read.
+                  Near-black on it is 7.0:1 — and looks better besides.
+
+     --brand-700  the readable one. Orange TEXT and links on a white page.
+                  5.8:1, comfortably legible. Bright orange text on white is
+                  2.5:1 and is unreadable, so it is never used for words.
+
+   That split is why the site can be aggressively orange without being one of
+   those orange sites you have to squint at.
+--------------------------------------------------------------------------- */
+
 @theme inline {
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-heading: var(--font-outfit), var(--font-dm-sans), sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -27,6 +77,8 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -39,6 +91,9 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-sunken: var(--sunken);
+  --color-keyline: var(--keyline);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -46,85 +101,480 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Motion. Three curves, used everywhere, never improvised.
+     - ease-out   general purpose slowdown
+     - ease-enter what a thing does while you press or hover INTO it
+     - ease-spring what it does on RELEASE: overshoots slightly, then settles.
+                   That tiny overshoot is the entire reason a button feels
+                   satisfying rather than merely animated.
+
+     A note for whoever reads this next, because an automated design check
+     will flag the spring as "bounce easing, dated and tacky", and it is not
+     wrong in general. It is wrong here, for two reasons:
+
+       1. A satisfying press was an explicit requirement, not a flourish.
+       2. The reference the look was built against uses the same trick with a
+          far larger overshoot (a 3.85 control point against our 1.9).
+
+     The thing that makes overshoot tacky is scale: a long bounce on a big
+     element. Ours is 160ms on a one-pixel lift and a 3% squash. Do not
+     "correct" it to a plain ease-out without asking — that removes the one
+     piece of feel the whole interaction pass was for. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.9, 0.64, 1);
+
+  /* Small things move fast, big things move slower. Matching these up is
+     what stops an interface feeling twitchy in one place and sluggish in
+     another. */
+  --duration-fast: 160ms;
+  --duration-mid: 260ms;
+  --duration-slow: 420ms;
+
+  /* Depth. Every shadow has BOTH an offset and a blur — a shadow with no
+     offset is a glow, and glows read as cheap. The colour is a warm brown,
+     not black, so shadows sit in the same world as the orange instead of
+     looking like a grey sticker laid on top. */
+  --shadow-xs: 0 1px 2px rgb(var(--shadow-rgb) / 0.07);
+  --shadow-sm: 0 1px 2px rgb(var(--shadow-rgb) / 0.06),
+    0 2px 6px rgb(var(--shadow-rgb) / 0.06);
+  --shadow-md: 0 2px 4px rgb(var(--shadow-rgb) / 0.06),
+    0 6px 16px rgb(var(--shadow-rgb) / 0.09);
+  --shadow-lg: 0 4px 8px rgb(var(--shadow-rgb) / 0.07),
+    0 16px 32px rgb(var(--shadow-rgb) / 0.12);
+  --shadow-xl: 0 8px 16px rgb(var(--shadow-rgb) / 0.08),
+    0 28px 56px rgb(var(--shadow-rgb) / 0.16);
+  /* RAISED surfaces: a lit top edge plus a shadow below, in one declaration.
+     The inset highlight is what turns a rectangle into an object with a top.
+     Baked into the same token so nobody can ship half of the effect. */
+  --shadow-raised: inset 0 1px 0 0 var(--keyline),
+    0 1px 2px rgb(var(--shadow-rgb) / 0.06),
+    0 2px 6px rgb(var(--shadow-rgb) / 0.07);
+  --shadow-raised-md: inset 0 1px 0 0 var(--keyline),
+    0 2px 4px rgb(var(--shadow-rgb) / 0.06),
+    0 8px 18px rgb(var(--shadow-rgb) / 0.1);
+  --shadow-raised-lg: inset 0 1px 0 0 var(--keyline),
+    0 4px 8px rgb(var(--shadow-rgb) / 0.07),
+    0 18px 36px rgb(var(--shadow-rgb) / 0.13);
+
+  /* The orange glow under a primary button. Tinted with the brand hue so it
+     looks like the button is actually lit, not just floating, and carrying
+     its own white top edge. */
+  --shadow-brand: inset 0 1px 0 0 rgb(255 255 255 / 0.32),
+    0 1px 2px rgb(var(--brand-rgb) / 0.3),
+    0 4px 12px rgb(var(--brand-rgb) / 0.32);
+  --shadow-brand-lg: inset 0 1px 0 0 rgb(255 255 255 / 0.38),
+    0 3px 6px rgb(var(--brand-rgb) / 0.32),
+    0 12px 28px rgb(var(--brand-rgb) / 0.4);
+
+  /* SUNKEN surfaces: the opposite trick. A shadow cast INWARD from the top
+     edge, so a text field reads as a well cut into the page rather than a
+     box sitting on it. Buttons come toward you, inputs go away from you. */
+  --shadow-inset: inset 0 1px 2px rgb(var(--shadow-rgb) / 0.08),
+    inset 0 0 0 1px rgb(var(--shadow-rgb) / 0.02);
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /* The orange scale. Comments show the ordinary hex code so you can paste
+     one into a design tool if you ever need to. */
+  --brand-50: oklch(0.975 0.016 65); /* #fff5ec */
+  --brand-100: oklch(0.945 0.0345 62); /* #ffe8d6 */
+  --brand-200: oklch(0.895 0.0647 58); /* #fed3b3 */
+  --brand-300: oklch(0.835 0.1022 54); /* #feb789 */
+  --brand-400: oklch(0.775 0.1429 51); /* #fd995b */
+  --brand-500: oklch(0.72 0.1831 48); /* #fd7924  the loud one */
+  --brand-600: oklch(0.65 0.1807 45); /* #e46210 */
+  --brand-700: oklch(0.515 0.15 38); /* #ac3f1a  the readable one */
+  --brand-800: oklch(0.445 0.13 34); /* #8d311c */
+  --brand-900: oklch(0.365 0.1 32); /* #69251a */
+
+  /* Raw red/green/blue numbers for the two colours we need to fade in and
+     out (shadows and the orange glow). CSS can't fade an oklch() value
+     inside a shadow, so these exist alongside. */
+  --shadow-rgb: 62 30 12;
+  --brand-rgb: 253 121 36;
+
+  /* Paper, not white. A warm off-white, the way good print stock is warm.
+     Pure #ffffff next to orange looks blue-ish and clinical. Cards are pure
+     white so they lift off this ground — that difference IS the depth. */
+  --background: oklch(0.985 0.006 70);
+  --foreground: oklch(0.19 0.02 55); /* warm near-black, never #000 */
+
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.19 0.02 55);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --popover-foreground: oklch(0.19 0.02 55);
+
+  /* A surface that sits BELOW the page — wells, table headers, code blocks. */
+  --sunken: oklch(0.962 0.011 62);
+
+  /* The hairline of light along a raised edge. This is the trick that makes
+     a flat rectangle read as a physical object with a lit top edge. */
+  --keyline: oklch(1 0 0 / 0.9);
+
+  /* Primary action: loud orange, near-black text. 7.0:1 contrast. */
+  --primary: var(--brand-500);
+  --primary-foreground: oklch(0.19 0.02 55);
+
+  --secondary: oklch(0.962 0.011 62);
+  --secondary-foreground: oklch(0.19 0.02 55);
+
+  --muted: oklch(0.962 0.011 62);
+  --muted-foreground: oklch(0.48 0.028 52); /* 6.4:1 on paper */
+
+  /* Hover tint and quiet orange surfaces. */
+  --accent: var(--brand-100);
+  --accent-foreground: var(--brand-900);
+
+  /* Error red. Deliberately pushed toward crimson and away from orange,
+     because in an orange product a normal red error would look like just
+     another brand colour. Colour is never the only signal though — errors
+     always carry an icon and words too. */
+  --destructive: oklch(0.505 0.215 22);
+  --destructive-foreground: oklch(0.99 0.005 60);
+
+  /* Green for the good news: a vouch accepted, a payout released. Darker
+     than green usually wants to be, because it has to stay readable as text
+     sitting on a pale tint of itself — the lighter draft measured 4.2:1
+     against that tint and failed. */
+  --success: oklch(0.46 0.135 152);
+  --success-foreground: oklch(0.99 0.005 60);
+
+  --border: oklch(0.905 0.012 60);
+  --input: oklch(0.885 0.014 58);
+  --ring: var(--brand-500);
+
+  /* Chart colours, in case a graph ever appears: an orange family with two
+     contrasting anchors, so no chart ever comes out grey. */
+  --chart-1: var(--brand-500);
+  --chart-2: var(--brand-700);
+  --chart-3: oklch(0.62 0.11 205);
+  --chart-4: var(--brand-300);
+  --chart-5: oklch(0.45 0.06 250);
+
+  /* 14px. Big enough to feel soft and modern, small enough that a card still
+     looks like a card rather than a pill. */
+  --radius: 0.875rem;
+
+  --sidebar: oklch(0.975 0.008 66);
+  --sidebar-foreground: oklch(0.19 0.02 55);
+  --sidebar-primary: var(--brand-500);
+  --sidebar-primary-foreground: oklch(0.19 0.02 55);
+  --sidebar-accent: var(--brand-100);
+  --sidebar-accent-foreground: var(--brand-900);
+  --sidebar-border: oklch(0.905 0.012 60);
+  --sidebar-ring: var(--brand-500);
 }
 
+/* ---------------------------------------------------------------------------
+   DARK MODE
+   ---------------------------------------------------------------------------
+   Nothing switches to this yet — there is no dark-mode toggle in Vouch. It is
+   defined anyway so that the day you want one, it already works and nobody
+   has to invent a second set of colours under time pressure. The browns are
+   warm here too: a warm-orange brand over a cold-grey dark mode looks broken.
+--------------------------------------------------------------------------- */
+
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --shadow-rgb: 0 0 0;
+
+  --background: oklch(0.175 0.012 55);
+  --foreground: oklch(0.96 0.008 70);
+
+  --card: oklch(0.225 0.015 52);
+  --card-foreground: oklch(0.96 0.008 70);
+  --popover: oklch(0.225 0.015 52);
+  --popover-foreground: oklch(0.96 0.008 70);
+
+  --sunken: oklch(0.205 0.013 52);
+  --keyline: oklch(1 0 0 / 0.1);
+
+  /* Still the loud orange with near-black text — it reads even better on a
+     dark ground than on a light one. */
+  --primary: var(--brand-500);
+  --primary-foreground: oklch(0.175 0.012 55);
+
+  --secondary: oklch(0.275 0.016 50);
+  --secondary-foreground: oklch(0.96 0.008 70);
+
+  --muted: oklch(0.275 0.016 50);
+  --muted-foreground: oklch(0.72 0.022 60);
+
+  --accent: oklch(0.32 0.045 45);
+  --accent-foreground: var(--brand-200);
+
+  --destructive: oklch(0.62 0.2 24);
+  --destructive-foreground: oklch(0.99 0.005 60);
+
+  --success: oklch(0.68 0.145 155);
+  --success-foreground: oklch(0.175 0.012 55);
+
+  --border: oklch(1 0 0 / 0.12);
+  --input: oklch(1 0 0 / 0.16);
+  --ring: var(--brand-500);
+
+  --chart-1: var(--brand-400);
+  --chart-2: var(--brand-600);
+  --chart-3: oklch(0.7 0.11 205);
+  --chart-4: var(--brand-200);
+  --chart-5: oklch(0.62 0.08 250);
+
+  --sidebar: oklch(0.205 0.013 52);
+  --sidebar-foreground: oklch(0.96 0.008 70);
+  --sidebar-primary: var(--brand-500);
+  --sidebar-primary-foreground: oklch(0.175 0.012 55);
+  --sidebar-accent: oklch(0.32 0.045 45);
+  --sidebar-accent-foreground: var(--brand-200);
+  --sidebar-border: oklch(1 0 0 / 0.12);
+  --sidebar-ring: var(--brand-500);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
+    /* Turn on the nicer letter shapes the fonts ship with but browsers leave
+       switched off by default: proper 'ti'/'ff' joins and real fractions. */
+    font-feature-settings: "liga" 1, "calt" 1;
+    text-rendering: optimizeLegibility;
   }
+
   html {
     @apply font-sans;
+    -webkit-text-size-adjust: 100%;
   }
+
+  /* ---- The parts of the page we did not draw -----------------------------
+     Text selection, the typing caret, the scrollbar and the focus ring all
+     ship with browser defaults that belong to no design system. Leaving them
+     grey is the single clearest tell that a site was assembled rather than
+     designed. Four rules, and the whole page starts feeling deliberate. */
+
+  ::selection {
+    background-color: var(--brand-200);
+    color: var(--brand-900);
+  }
+
+  :root {
+    caret-color: var(--brand-600);
+    scrollbar-color: var(--brand-300) transparent;
+    accent-color: var(--brand-500);
+  }
+
+  /* Chrome and Safari need the long-hand version. */
+  ::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--brand-300);
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--brand-500);
+  }
+
+  /* One focus ring for the entire product, in the brand orange, and it never
+     gets removed. Keyboard users are not an edge case. */
+  :focus-visible {
+    outline: 2px solid var(--brand-500);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Underlines that sit below the letters instead of slicing through the
+     descenders of g, y and p. */
+  a {
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: from-font;
+  }
+
+  /* Headings get the display face and a slight negative tracking. Large type
+     set at default spacing always looks loose. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+
+  /* Stop paragraphs ending in a single orphan word. */
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@layer utilities {
+  /* Money, dates, counts — anything in a column that should line up digit
+     over digit. Proportional numerals make a table of figures look ragged. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* The lit top edge that makes a surface read as a raised physical object
+     rather than a coloured rectangle. Pair with a shadow, never with a
+     border — a 1px border underneath a soft shadow is the giveaway of a
+     card that cannot decide what it is. */
+  .keyline {
+    box-shadow: inset 0 1px 0 0 var(--keyline);
+  }
+
+  /* Comfortable reading width. Long lines are the most common reason a
+     wordy page feels like hard work. */
+  .measure {
+    max-width: 68ch;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   PEOPLE WHO ASKED FOR LESS MOTION
+   ---------------------------------------------------------------------------
+   Operating systems have a "reduce motion" setting, used by people who get
+   motion sickness or find movement distracting. When it is on, everything
+   still works and still looks right — it just stops moving. This is not
+   optional politeness; it is an accessibility requirement.
+--------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+    /* The delays matter as much as the durations. Collapsing only the
+       duration still leaves a staggered entrance sitting invisible behind
+       its delay — the hero diagram measured 420ms of blank panel before
+       snapping into place, which is the jarring version of the effect this
+       setting exists to avoid. */
+    animation-delay: -1ms !important;
+    transition-delay: 0s !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   THE ONE ANIMATED MOMENT ON THE HOME PAGE
+   ---------------------------------------------------------------------------
+   The hero diagram assembles itself once, on load: the rail grows out to the
+   right, then the three marks land on it in turn, each overshooting slightly
+   before it settles.
+
+   Note the direction of travel. The resting state — what you get with no
+   animation at all — is the FINISHED diagram, and the keyframes run from
+   hidden into it. Anyone with "reduce motion" switched on has the duration
+   collapsed to nothing by the rule at the end of this file, so they land on
+   the complete diagram instantly rather than on an empty box that never
+   fills in. Written the other way round, that setting would break the page.
+--------------------------------------------------------------------------- */
+
+@keyframes vouch-rail {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes vouch-step {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+    scale: 0.82;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+
+.vouch-chain-rail {
+  /* Held back until the hand has finished waving, so the hero arrives as one
+     sequence — greeting, then explanation — rather than two animations
+     talking over each other. */
+  animation: vouch-rail var(--duration-slow) var(--ease-out) 900ms both;
+}
+
+.vouch-chain-step {
+  /* --i is the mark's position in the row, set on the element, so the three
+     land one after another instead of all at once. */
+  animation: vouch-step 520ms var(--ease-spring) both;
+  animation-delay: calc(1060ms + var(--i) * 130ms);
+}
+
+/* ---------------------------------------------------------------------------
+   THE WAVE
+   ---------------------------------------------------------------------------
+   The hand arrives, waves four times, and stops. Once per page load — never
+   on a loop, because a hand waving forever in the corner of a sign-in form
+   is a distraction you cannot dismiss.
+
+   Same rule as the hero diagram: the resting state is the finished state
+   (upright, full size, no rotation), so when "reduce motion" collapses this
+   away the hand simply sits there being a hand.
+--------------------------------------------------------------------------- */
+
+@keyframes hello-wave-arrive {
+  from {
+    opacity: 0;
+    scale: 0.4;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes hello-wave-hand {
+  /* Held still at first so the arrival lands before the wave starts. */
+  0%,
+  14% {
+    rotate: 0deg;
+  }
+  28% {
+    rotate: 15deg;
+  }
+  42% {
+    rotate: -11deg;
+  }
+  56% {
+    rotate: 13deg;
+  }
+  70% {
+    rotate: -8deg;
+  }
+  84% {
+    rotate: 7deg;
+  }
+  100% {
+    rotate: 0deg;
+  }
+}
+
+.hello-wave {
+  animation: hello-wave-arrive 420ms var(--ease-spring) both;
+}
+
+.hello-wave-hand {
+  /* Pivot at the wrist rather than the middle of the graphic, or the hand
+     skates sideways instead of waving. */
+  transform-origin: 50% 92%;
+  transform-box: fill-box;
+  animation: hello-wave-hand 1700ms var(--ease-out) 260ms both;
 }

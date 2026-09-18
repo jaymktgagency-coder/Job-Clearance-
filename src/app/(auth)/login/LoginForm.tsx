@@ -5,8 +5,10 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
+
 import { signIn, type FormState } from "../actions";
+import { FormError } from "@/components/form-message";
+import { InlineLink } from "@/components/inline-link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,14 +20,9 @@ export function LoginForm() {
 
   return (
     <form action={action} className="space-y-5">
-      {state.error ? (
-        <p
-          role="alert"
-          className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {state.error}
-        </p>
-      ) : null}
+      {/* FormError carries role="alert" — a screen reader announces this the
+          moment it appears, and the browser tests locate it by that role. */}
+      <FormError>{state.error}</FormError>
 
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
@@ -43,15 +40,13 @@ export function LoginForm() {
         />
       </div>
 
-      <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Signing in..." : "Sign in"}
+      <Button type="submit" size="lg" loading={pending} className="w-full">
+        Sign in
       </Button>
 
       <p className="text-sm text-muted-foreground">
-        New here?{" "}
-        <Link href="/signup" className="underline underline-offset-4">
-          Create an account
-        </Link>
+        Job seekers are never charged — not now, not later.{" "}
+        <InlineLink href="/">How Vouch works</InlineLink>
       </p>
     </form>
   );

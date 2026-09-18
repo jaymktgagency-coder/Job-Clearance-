@@ -115,8 +115,8 @@ src/
     ai/{client,resume-file,parse-resume,score-fit,run}.ts
     stripe/{client,payment-methods}.ts
   proxy.ts               -- Next 16 renamed middleware.ts; exports proxy()
-supabase/migrations/     0001-0011
-supabase/tests/          00 stubs + 10..80, 100 checks
+supabase/migrations/     0001-0012
+supabase/tests/          00 stubs + 10..90, 113 checks
 scripts/                 seed.mts, ai-backfill.mts
 tests/                   7 browser tests (.mjs) + ai-layer.mts + stripe-9a.mts
 ```
@@ -215,6 +215,20 @@ function. A non-async helper there is a build error (this bit once —
 
 **shadcn/ui here is Base UI**: use `render={<Link href="..." />}`, not `asChild`.
 
+**The look lives in `DESIGN.md`, and colours live only in `globals.css`.**
+Orange and white, warm neutrals, three motion curves, no hard-coded colour
+anywhere else. The one rule worth knowing before touching a screen: orange as
+a *surface* carries near-black text (7.0:1), orange as *text* is always the
+darker `--brand-700` (5.8:1). White on bright orange is 2.6:1 and fails.
+
+**Tailwind v4 moves things with `translate` and `scale`, not `transform`.**
+A transition naming `transform` animates nothing, silently, and looks fine in
+a screenshot. **And a utility class outranks anything in `@layer base`** — so
+`outline-none` on a component beats the global `:focus-visible` ring and makes
+it invisible to keyboard users. Both of these shipped once and were caught
+only by reading computed styles off a live page. `/design` is the parts
+catalogue; it needs no login and renders without a database.
+
 **Supabase gotchas:** errors are plain objects, not `Error` — check
 `"message" in error`. `head: true` returns 204 with a null count on a missing
 table; use `.select("id", { count: "exact" }).limit(1)`. Uploading a `Blob`
@@ -223,6 +237,16 @@ sends `application/octet-stream` and the bucket rejects it — use a `Buffer`.
 **AI writes go through the admin client** — the columns are platform-only by
 design. Both AI jobs run inside `after()` from `next/server`, so nobody waits
 and a failure costs a score, never an upload or a vouch.
+
+**Stripe Connect is on Accounts v2.** Stripe refuses Accounts v1 for new
+integrations, so a voucher's account is created with `v2.core.accounts` using
+the `recipient` configuration; onboarding, reading state and transfers still
+go through the v1 endpoints, which accept a v2 id. **Read capability status
+from the v2 view, never v1** — they disagree, and the transfer follows v2. A
+v1 read has been seen reporting `payouts_enabled: true` on an account v2 called
+restricted and Stripe then refused to pay. A recipient-only account also forces
+`fees_collector`/`losses_collector` to `"application"`, so **Vouch carries a
+negative balance on a voucher's account, not Stripe.**
 
 **Stripe:** employers enter card details on **Stripe's own hosted Checkout page**
 (`mode: "setup"`) — Vouch never receives a card number, account number or CVC.
@@ -252,6 +276,7 @@ failures.
 | `0009_separation_and_hire_integrity.sql` | departure flow; each side writes only its own half; credits lapse |
 | `0010_payment_methods_and_company_trust.sql` | Stripe columns; badges and domain claims are platform-only |
 | `0011_collect_the_fee.sql` | Collect the fee off-session; **no payout releases against an unpaid charge** |
+| `0012_voucher_payout_accounts.sql` | Stripe Connect recipient accounts; paying needs an account Stripe enabled |
 
 ## Testing
 

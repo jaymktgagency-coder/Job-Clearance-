@@ -10,9 +10,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { currentProfile } from "@/lib/auth";
 import { SendCodeForm, ConfirmCodeForm } from "./VerifyForms";
+import { AuthShell } from "@/components/auth-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
@@ -31,43 +31,47 @@ export default async function VerifyPage() {
   const verified = vp?.status === "verified";
 
   return (
-    <main className="mx-auto w-full max-w-lg px-6 py-12">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex flex-wrap items-center gap-3">
-            Verify you work at {company?.name ?? "your company"}
-            {verified ? <Badge>Verified</Badge> : <Badge variant="outline">Not verified</Badge>}
-          </CardTitle>
-          <CardDescription>
-            {verified
-              ? vp?.verification_method === "employer_invite"
-                ? "Your employer invited you directly, so you're already verified."
-                : "You're verified by your work email."
-              : "Only verified employees can vouch. This is what makes a vouch mean anything."}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-6">
+    <AuthShell
+      title={
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          Verify you work at {company?.name ?? "your company"}
           {verified ? (
-            <Button render={<Link href="/dashboard" />}>Back to your dashboard</Button>
-          ) : vp?.work_email ? (
-            <>
-              <SendCodeForm workEmail={vp.work_email} />
-              <hr />
-              <ConfirmCodeForm />
-              <p className="text-sm text-muted-foreground">
-                No company email address? Ask your employer to invite you directly —
-                that works for businesses without their own email domain.
-              </p>
-            </>
+            <Badge>Verified</Badge>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              There&apos;s no work email on your profile. Ask your employer to invite you
-              directly instead.
-            </p>
+            <Badge variant="soft">Not yet</Badge>
           )}
-        </CardContent>
-      </Card>
-    </main>
+        </span>
+      }
+      description={
+        verified
+          ? vp?.verification_method === "employer_invite"
+            ? "Your employer invited you directly, so you are already verified."
+            : "You are verified by your work email."
+          : "Only verified employees can vouch. That is what makes a vouch mean anything."
+      }
+    >
+      <div className="space-y-6">
+        {verified ? (
+          <Button size="lg" render={<Link href="/dashboard" />}>
+            Back to your dashboard
+          </Button>
+        ) : vp?.work_email ? (
+          <>
+            <SendCodeForm workEmail={vp.work_email} />
+            <hr className="border-border" />
+            <ConfirmCodeForm />
+            <p className="text-sm text-muted-foreground">
+              No company email address? Ask your employer to invite you directly
+              — that works for businesses without their own email domain.
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            There&apos;s no work email on your profile. Ask your employer to
+            invite you directly instead.
+          </p>
+        )}
+      </div>
+    </AuthShell>
   );
 }

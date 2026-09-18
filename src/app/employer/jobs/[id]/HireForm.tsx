@@ -6,6 +6,7 @@
 
 import { useActionState, useState } from "react";
 import { reportHire, type CandidateState } from "../../actions";
+import { FormError } from "@/components/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +17,10 @@ export function HireForm({ applicationId, name }: { applicationId: string; name:
 
   if (state.notice) {
     return (
-      <p role="status" className="rounded-md border px-3 py-2 text-sm text-muted-foreground">
+      <p
+        role="status"
+        className="rounded-lg bg-success/10 px-4 py-3 text-sm font-medium text-success"
+      >
         {state.notice}
       </p>
     );
@@ -31,26 +35,23 @@ export function HireForm({ applicationId, name }: { applicationId: string; name:
   }
 
   return (
-    <form action={action} className="space-y-3 rounded-md border p-3">
+    <form action={action} className="w-full space-y-4 rounded-lg bg-sunken p-4">
       <input type="hidden" name="application_id" value={applicationId} />
-      {state.error ? (
-        <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {state.error}
-        </p>
-      ) : null}
+      <FormError>{state.error}</FormError>
       <div className="space-y-2">
         <Label htmlFor={`start-${applicationId}`}>When do they start?</Label>
         <Input id={`start-${applicationId}`} name="start_date" type="date" required />
         <p className="text-sm text-muted-foreground">
           The fee is due on a hire, and the voucher&apos;s share releases 60 days
-          after this date. We&apos;ll ask {name.split(" ")[0]} to confirm too.
+          after this date. We&apos;ll ask {name.split(" ")[0]} to confirm too —
+          nothing is owed until they do.
         </p>
       </div>
       <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={pending}>
-          {pending ? "Recording..." : "Confirm the hire"}
+        <Button type="submit" loading={pending}>
+          Confirm the hire
         </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
+        <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
           Cancel
         </Button>
       </div>

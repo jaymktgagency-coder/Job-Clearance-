@@ -9,6 +9,7 @@ import { currentProfile } from "@/lib/auth";
 import { withdrawRequest, confirmHire } from "../jobs/actions";
 import { SeparationPanel, type SeparationHire } from "@/components/separation-panel";
 import { AiNotice } from "@/components/ai-notice";
+import { AppHeader } from "@/components/app-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,14 +58,17 @@ export default async function RequestsPage() {
     .order("start_date", { ascending: false });
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-12">
+    <>
+      <AppHeader profile={profile} />
+
+      <main className="mx-auto w-full max-w-3xl px-6 py-10 sm:py-14">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight">Your intro requests</h1>
-        <Button variant="outline" size="sm" render={<Link href="/jobs" />}>
+        <h1 className="text-3xl font-semibold sm:text-4xl">Your intro requests</h1>
+        <Button variant="outline" render={<Link href="/jobs" />}>
           Browse roles
         </Button>
       </div>
-      <p className="mt-2 text-muted-foreground">
+      <p className="measure mt-3 text-lg text-muted-foreground">
         {open} of 5 open. The limit keeps requests meaningful — someone reading
         five focused asks takes them more seriously than fifty scattergun ones.
       </p>
@@ -75,7 +79,7 @@ export default async function RequestsPage() {
         return (
           <Card key={h.id as string} className="mt-6">
             <CardHeader>
-              <CardTitle className="text-base">Did you start at {co?.name}?</CardTitle>
+              <CardTitle>Did you start at {co?.name}?</CardTitle>
               <CardDescription>
                 {co?.name} says they hired you as {job?.title}, starting{" "}
                 {h.start_date as string}. Confirm it and the person who vouched for
@@ -85,7 +89,7 @@ export default async function RequestsPage() {
             <CardContent className="flex flex-wrap items-center gap-3">
               <form action={confirmHire}>
                 <input type="hidden" name="hire_id" value={h.id as string} />
-                <Button type="submit" size="sm">Yes, I started there</Button>
+                <Button type="submit">Yes, I started there</Button>
               </form>
               <p className="text-sm text-muted-foreground">
                 If this isn&apos;t right, don&apos;t confirm it — tell us instead.
@@ -101,7 +105,7 @@ export default async function RequestsPage() {
         return (
           <Card key={h.id as string} className="mt-6">
             <CardHeader>
-              <CardTitle className="text-base">
+              <CardTitle>
                 {job?.title} at {co?.name}
               </CardTitle>
               <CardDescription>
@@ -131,26 +135,34 @@ export default async function RequestsPage() {
           return (
             <Card key={r.id as string}>
               <CardHeader>
-                <CardTitle className="text-base">
+                <CardTitle className="text-lg">
                   {job ? (
-                    <Link href={`/jobs/${job.id}`} className="underline-offset-4 hover:underline">
+                    <Link
+                      href={`/jobs/${job.id}`}
+                      className="underline-offset-[0.2em] hover:text-brand-800 hover:underline"
+                    >
                       {job.title}
                     </Link>
                   ) : (
                     "A role that's since closed"
                   )}
                 </CardTitle>
-                <CardDescription className="flex flex-wrap items-center gap-2">
-                  <span>{company?.name}</span>
-                  <Badge variant={r.status === "vouched" ? "default" : "outline"}>
+                <p className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">{company?.name}</span>
+                  <Badge variant={r.status === "vouched" ? "success" : "soft"}>
                     {STATUS_TEXT[r.status as string] ?? (r.status as string)}
                   </Badge>
-                </CardDescription>
+                </p>
               </CardHeader>
               <CardContent className="flex flex-wrap items-end justify-between gap-3">
                 <div className="text-sm text-muted-foreground">
-                  {r.message ? <p className="max-w-md italic">&ldquo;{r.message}&rdquo;</p> : null}
-                  <p className="mt-1">
+                  {r.message ? (
+                    /* Their own words, set apart from the page's voice. */
+                    <blockquote className="measure border-l-2 border-brand-200 pl-3 italic">
+                      {r.message}
+                    </blockquote>
+                  ) : null}
+                  <p className="mt-2">
                     Asked {new Date(r.created_at as string).toLocaleDateString()}
                   </p>
                 </div>
@@ -169,9 +181,15 @@ export default async function RequestsPage() {
 
         {(requests ?? []).length === 0 ? (
           <Card>
-            <CardContent className="py-8 text-center text-sm text-muted-foreground">
-              <p>You haven&apos;t asked for any intros yet.</p>
-              <Button className="mt-4" render={<Link href="/jobs" />}>
+            <CardContent className="py-8 text-center">
+              <p className="font-semibold">
+                You haven&apos;t asked for any intros yet.
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Find a role you want, and someone who already works there
+                decides whether to back you.
+              </p>
+              <Button className="mt-5" render={<Link href="/jobs" />}>
                 Browse open roles
               </Button>
             </CardContent>
@@ -179,7 +197,8 @@ export default async function RequestsPage() {
         ) : null}
       </div>
 
-      <AiNotice className="mt-8" />
-    </main>
+        <AiNotice className="mt-8" />
+      </main>
+    </>
   );
 }

@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { currentProfile } from "@/lib/auth";
 import { NewJobForm } from "./NewJobForm";
 import { setJobStatus } from "../actions";
+import { AppHeader } from "@/components/app-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,23 +54,21 @@ export default async function EmployerJobsPage() {
     Number(settings?.find((s) => s.key === key)?.value ?? fallback);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-12">
+    <>
+      <AppHeader profile={profile} />
+
+      <main className="mx-auto w-full max-w-3xl px-6 py-10 sm:py-14">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight">Your roles</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" render={<Link href="/employer/billing" />}>
-            Payment method
-          </Button>
-          <Button variant="ghost" size="sm" render={<Link href="/dashboard" />}>
-            Dashboard
-          </Button>
-        </div>
+        <h1 className="text-3xl font-semibold sm:text-4xl">Your roles</h1>
+        <Button variant="outline" render={<Link href="/employer/billing" />}>
+          Payment method
+        </Button>
       </div>
-      <p className="mt-2 text-muted-foreground">
+      <p className="measure mt-3 text-lg text-muted-foreground">
         {company?.name} · you only ever see candidates someone has vouched for.
       </p>
 
-      <div className="mt-8 space-y-4">
+      <div className="mt-10 space-y-4">
         {(jobs ?? []).map((job) => {
           const apps = (job.applications ?? []) as { id: string; status: string }[];
           const live = apps.filter((a) => !["hired", "passed"].includes(a.status)).length;
@@ -77,47 +76,72 @@ export default async function EmployerJobsPage() {
           return (
             <Card key={job.id as string}>
               <CardHeader>
-                <CardTitle className="flex flex-wrap items-center gap-2 text-base">
-                  <Link href={`/employer/jobs/${job.id}`} className="underline-offset-4 hover:underline">
+                <CardTitle className="flex flex-wrap items-center gap-2.5 text-lg">
+                  <Link
+                    href={`/employer/jobs/${job.id}`}
+                    className="underline-offset-[0.2em] hover:text-brand-800 hover:underline"
+                  >
                     {job.title as string}
                   </Link>
-                  <Badge variant={job.status === "open" ? "default" : "outline"}>
+                  <Badge variant={job.status === "open" ? "default" : "soft"}>
                     {job.status as string}
                   </Badge>
                 </CardTitle>
                 <CardDescription>
-                  {apps.length} vouched {apps.length === 1 ? "candidate" : "candidates"}
+                  {apps.length} vouched{" "}
+                  {apps.length === 1 ? "candidate" : "candidates"}
                   {live !== apps.length ? ` · ${live} still open` : ""}
-                  {" · "}
-                  {money(job.fee_amount_cents as number)} if you hire
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-wrap items-center gap-2">
-                <Button size="sm" render={<Link href={`/employer/jobs/${job.id}`} />}>
-                  {apps.length > 0 ? "See candidates" : "Open"}
-                </Button>
-                <form action={setJobStatus}>
-                  <input type="hidden" name="job_id" value={job.id as string} />
-                  <input type="hidden" name="status" value={job.status === "open" ? "closed" : "open"} />
-                  <Button type="submit" size="sm" variant="outline">
-                    {job.status === "open" ? "Close it" : "Reopen it"}
+              <CardContent className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    render={<Link href={`/employer/jobs/${job.id}`} />}
+                  >
+                    {apps.length > 0 ? "See candidates" : "Open"}
                   </Button>
-                </form>
+                  <form action={setJobStatus}>
+                    <input type="hidden" name="job_id" value={job.id as string} />
+                    <input
+                      type="hidden"
+                      name="status"
+                      value={job.status === "open" ? "closed" : "open"}
+                    />
+                    <Button type="submit" size="sm" variant="outline">
+                      {job.status === "open" ? "Close it" : "Reopen it"}
+                    </Button>
+                  </form>
+                </div>
+                {/* The fee frozen onto this role when it was posted. Later
+                    pricing changes never rewrite it, so it is stated per role
+                    rather than as a single number somewhere else. */}
+                <p className="text-sm text-muted-foreground">
+                  <span className="tabular font-semibold text-foreground">
+                    {money(job.fee_amount_cents as number)}
+                  </span>{" "}
+                  if you hire
+                </p>
               </CardContent>
             </Card>
           );
         })}
 
         {(jobs ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No roles yet. Post your first one below.
-          </p>
+          <Card>
+            <CardContent className="py-6 text-center">
+              <p className="font-semibold">No roles yet.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Post your first one below. Posting is free.
+              </p>
+            </CardContent>
+          </Card>
         ) : null}
       </div>
 
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle className="text-base">Post a role</CardTitle>
+          <CardTitle>Post a role</CardTitle>
           <CardDescription>
             Free to post. You pay only when you actually hire someone.
           </CardDescription>
@@ -130,6 +154,7 @@ export default async function EmployerJobsPage() {
           />
         </CardContent>
       </Card>
-    </main>
+      </main>
+    </>
   );
 }

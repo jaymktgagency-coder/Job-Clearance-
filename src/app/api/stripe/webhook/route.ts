@@ -23,6 +23,7 @@ import type Stripe from "stripe";
 import { stripe, stripeIsConfigured } from "@/lib/stripe/client";
 import { saveDefaultPaymentMethod } from "@/lib/stripe/payment-methods";
 import { recordIntentOutcome } from "@/lib/stripe/charges";
+import { syncRecipientAccount } from "@/lib/stripe/connect";
 
 // Webhooks are never prerendered and never cached.
 export const dynamic = "force-dynamic";
@@ -127,6 +128,18 @@ export async function POST(request: Request) {
         const intent = event.data.object as Stripe.PaymentIntent;
         const outcome = await recordIntentOutcome(intent);
         console.log(`[stripe] ${event.type}: ${outcome}`);
+        break;
+      }
+
+      // A voucher's payout account changing: they finished onboarding, or
+      // Stripe decided it needs something more. Either way our copy of their
+      // state — including whether they can be paid at all — comes from here.
+      case "account.updated": {
+        const account = event.data.object as Stripe.Account;
+        if (account.metadata?.vouch_user_id) {
+          const state = await syncRecipientAccount(account.id);
+          console.log(`[stripe] payout account ${account.id} is now ${state.status}`);
+        }
         break;
       }
 

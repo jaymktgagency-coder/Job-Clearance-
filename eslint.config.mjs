@@ -24,6 +24,12 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Browser test scripts, not application code.
     "tests/**",
+    // Design skills installed by `npx skills add`. Vendored reference
+    // material for the coding agent — never bundled, never shipped, and not
+    // ours to lint. Without this, 15 errors from their .cjs helpers drown
+    // out any real problem in src/.
+    ".agents/**",
+    ".claude/**",
   ]),
 ]);
 
