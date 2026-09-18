@@ -9,6 +9,8 @@ import { currentProfile } from "@/lib/auth";
 import { AiNotice } from "@/components/ai-notice";
 import { ParsedResume, type ParsedResumeShape } from "@/components/parsed-resume";
 import { ProfileForm, ResumeForm, DeleteAccount } from "./ProfileForms";
+import { PictureForm } from "@/components/picture-form";
+import { uploadAvatar, removeAvatar } from "./actions";
 import { AppHeader } from "@/components/app-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +49,25 @@ export default async function ProfilePage() {
       </p>
 
       <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Your picture</CardTitle>
+          <CardDescription>
+            Shown next to your name wherever you appear — in a voucher&apos;s
+            inbox, and on an employer&apos;s list of candidates. Optional, but a
+            face makes a stranger far likelier to read the rest.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PictureForm
+            currentUrl={profile.avatar_url}
+            name={profile.full_name}
+            uploadAction={uploadAvatar}
+            removeAction={removeAvatar}
+          />
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
         <CardHeader>
           <CardTitle>About you</CardTitle>
         </CardHeader>

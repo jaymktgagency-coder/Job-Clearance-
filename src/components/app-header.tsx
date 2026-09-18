@@ -17,8 +17,10 @@ import Link from "next/link";
 
 import { signOut } from "@/app/(auth)/actions";
 import { ROLE_LABEL, type Profile } from "@/lib/auth";
+import { Avatar } from "@/components/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /** Where each role actually spends its time. */
 const NAV: Record<Profile["role"], { href: string; label: string }[]> = {
@@ -30,13 +32,22 @@ const NAV: Record<Profile["role"], { href: string; label: string }[]> = {
   voucher: [
     { href: "/inbox", label: "Inbox" },
     { href: "/voucher/payouts", label: "Earnings" },
-    { href: "/profile", label: "Profile" },
+    // Not /profile: that is the seeker's page, and it used to bounce a
+    // voucher straight back to their dashboard.
+    { href: "/voucher/profile", label: "Profile" },
   ],
   employer: [
     { href: "/employer/jobs", label: "Roles" },
     { href: "/employer/billing", label: "Billing" },
-    { href: "/profile", label: "Profile" },
+    { href: "/employer/company", label: "Company" },
   ],
+};
+
+/** Where each role's own profile page lives. One list, so it cannot drift. */
+const PROFILE_HREF: Record<Profile["role"], string> = {
+  seeker: "/profile",
+  voucher: "/voucher/profile",
+  employer: "/employer/company",
 };
 
 export function AppHeader({ profile }: { profile: Profile }) {
@@ -71,11 +82,51 @@ export function AppHeader({ profile }: { profile: Profile }) {
           ))}
         </nav>
 
+        {/* Their own picture, linking to wherever their profile lives. Small
+            and last, because it is a way back to yourself rather than
+            something anybody comes to this bar looking for. */}
+        <Link
+          href={PROFILE_HREF[profile.role]}
+          className="shrink-0 rounded-full transition-opacity duration-[160ms] ease-out hover:opacity-80"
+          aria-label="Your profile"
+        >
+          <Avatar src={profile.avatar_url} name={profile.full_name} size="sm" />
+        </Link>
+
         <form action={signOut}>
           <Button type="submit" variant="ghost" className="px-3">
             Sign out
           </Button>
         </form>
+      </div>
+    </header>
+  );
+}
+
+/**
+ * The header's own stand-in, for `loading.tsx` files.
+ *
+ * Every signed-in page renders its own header rather than inheriting one from
+ * a layout, so a loading screen that showed only the page body would appear
+ * with no bar at the top and then have one drop in. The word "Vouch" is real
+ * — it is the same on every screen and does not need fetching — and only the
+ * parts that depend on who you are stand in as grey.
+ */
+export function AppHeaderSkeleton() {
+  return (
+    <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur-md">
+      <div className="mx-auto flex w-full max-w-5xl items-center gap-4 px-6 py-3">
+        <span className="font-heading inline-flex min-h-11 items-center text-lg font-semibold tracking-[-0.03em]">
+          Vouch
+        </span>
+        <Skeleton className="hidden h-6 w-20 rounded-full sm:block" />
+        <div className="flex flex-1 items-center gap-1">
+          <Skeleton className="h-11 w-20" />
+          <Skeleton className="h-11 w-28" />
+          <Skeleton className="hidden h-11 w-20 sm:block" />
+        </div>
+        <Skeleton className="size-8 rounded-full" />
+        <Skeleton className="h-11 w-20" />
       </div>
     </header>
   );

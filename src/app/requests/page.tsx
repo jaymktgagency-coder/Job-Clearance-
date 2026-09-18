@@ -10,6 +10,7 @@ import { withdrawRequest, confirmHire } from "../jobs/actions";
 import { SeparationPanel, type SeparationHire } from "@/components/separation-panel";
 import { AiNotice } from "@/components/ai-notice";
 import { AppHeader } from "@/components/app-header";
+import { Avatar } from "@/components/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +33,7 @@ export default async function RequestsPage() {
   const supabase = await createClient();
   const { data: requests } = await supabase
     .from("intro_requests")
-    .select("id, status, message, created_at, responded_at, jobs(id, title, companies(name))")
+    .select("id, status, message, created_at, responded_at, jobs(id, title, companies(name, logo_url))")
     .order("created_at", { ascending: false });
 
   const open = (requests ?? []).filter((r) => r.status === "pending").length;
@@ -148,6 +149,12 @@ export default async function RequestsPage() {
                   )}
                 </CardTitle>
                 <p className="flex flex-wrap items-center gap-2 text-sm">
+                  <Avatar
+                    src={company?.logo_url}
+                    name={company?.name}
+                    size="sm"
+                    contain
+                  />
                   <span className="text-muted-foreground">{company?.name}</span>
                   <Badge variant={r.status === "vouched" ? "success" : "soft"}>
                     {STATUS_TEXT[r.status as string] ?? (r.status as string)}

@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { currentProfile } from "@/lib/auth";
 import { AppHeader } from "@/components/app-header";
+import { Avatar } from "@/components/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -35,7 +36,7 @@ export default async function InboxPage(props: PageProps<"/inbox">) {
 
   const { data: requests } = await supabase
     .from("intro_requests")
-    .select("id, message, created_at, seeker_id, jobs(title), users!intro_requests_seeker_id_fkey(full_name, seeker_profiles(headline, location, years_experience))")
+    .select("id, message, created_at, seeker_id, jobs(title), users!intro_requests_seeker_id_fkey(full_name, avatar_url, seeker_profiles(headline, location, years_experience))")
     .eq("status", "pending")
     .order("created_at", { ascending: true });
 
@@ -90,20 +91,25 @@ export default async function InboxPage(props: PageProps<"/inbox">) {
           return (
             <Card key={r.id as string} interactive className="group">
               <CardHeader>
-                <CardTitle className="text-lg">
-                  {/* Stretched over the whole card, so the tap target is the
-                      card and not just the name. */}
-                  <Link
-                    href={`/inbox/${r.id}`}
-                    className="after:absolute after:inset-0 after:content-[''] group-hover/card:text-brand-800"
-                  >
-                    {person?.full_name ?? "Someone"}
-                  </Link>
-                </CardTitle>
-                <CardDescription>
-                  {sp?.headline ?? "No headline yet"}
-                  {sp?.location ? ` · ${sp.location}` : ""}
-                </CardDescription>
+                <div className="flex items-start gap-3">
+                  <Avatar src={person?.avatar_url} name={person?.full_name} />
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-lg">
+                      {/* Stretched over the whole card, so the tap target is the
+                          card and not just the name. */}
+                      <Link
+                        href={`/inbox/${r.id}`}
+                        className="after:absolute after:inset-0 after:content-[''] group-hover/card:text-brand-800"
+                      >
+                        {person?.full_name ?? "Someone"}
+                      </Link>
+                    </CardTitle>
+                    <CardDescription>
+                      {sp?.headline ?? "No headline yet"}
+                      {sp?.location ? ` · ${sp.location}` : ""}
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm">

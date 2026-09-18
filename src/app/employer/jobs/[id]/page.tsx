@@ -15,6 +15,7 @@ import { setCandidateStatus } from "../../actions";
 import { HireForm } from "./HireForm";
 import { SeparationPanel, type SeparationHire } from "@/components/separation-panel";
 import { AppHeader } from "@/components/app-header";
+import { Avatar } from "@/components/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,9 +55,9 @@ export default async function CandidatesPage(props: PageProps<"/employer/jobs/[i
     .from("applications")
     .select(`
       id, status, ai_fit_score, ai_reasoning, created_at, seeker_id,
-      users!applications_seeker_id_fkey(full_name, seeker_profiles(headline, location, years_experience, skills, resume_path)),
+      users!applications_seeker_id_fkey(full_name, avatar_url, seeker_profiles(headline, location, years_experience, skills, resume_path)),
       vouches(body, relationship, disclosed_fee_cents, created_at,
-              users!vouches_voucher_id_fkey(full_name, voucher_profiles(job_title))),
+              users!vouches_voucher_id_fkey(full_name, avatar_url, voucher_profiles(job_title))),
       hires(id, start_date, status, confirmed_by_seeker_at,
             separated_at, separation_reported_by, separation_reported_at, separation_claimed_date,
             separation_confirmed_by_employer_at, separation_confirmed_by_seeker_at, separation_disputed_at)
@@ -123,17 +124,22 @@ export default async function CandidatesPage(props: PageProps<"/employer/jobs/[i
           return (
             <Card key={c.id as string}>
               <CardHeader>
-                <CardTitle className="flex flex-wrap items-center gap-2.5 text-lg">
-                  {person?.full_name ?? "Someone"}
-                  <Badge variant={c.status === "hired" ? "success" : "soft"}>
-                    {c.status as string}
-                  </Badge>
-                </CardTitle>
-                <CardDescription>
-                  {sp?.headline ?? "No headline"}
-                  {sp?.location ? ` · ${sp.location}` : ""}
-                  {sp?.years_experience != null ? ` · ${sp.years_experience} years` : ""}
-                </CardDescription>
+                <div className="flex items-start gap-3">
+                  <Avatar src={person?.avatar_url} name={person?.full_name} />
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="flex flex-wrap items-center gap-2.5 text-lg">
+                      {person?.full_name ?? "Someone"}
+                      <Badge variant={c.status === "hired" ? "success" : "soft"}>
+                        {c.status as string}
+                      </Badge>
+                    </CardTitle>
+                    <CardDescription>
+                      {sp?.headline ?? "No headline"}
+                      {sp?.location ? ` · ${sp.location}` : ""}
+                      {sp?.years_experience != null ? ` · ${sp.years_experience} years` : ""}
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
 
               <CardContent className="space-y-4 text-sm">
@@ -143,6 +149,11 @@ export default async function CandidatesPage(props: PageProps<"/employer/jobs/[i
                 {vouch ? (
                   <div className="rounded-lg bg-brand-50 p-4">
                     <div className="flex flex-wrap items-center gap-2">
+                      <Avatar
+                        src={voucher?.avatar_url}
+                        name={voucher?.full_name}
+                        size="sm"
+                      />
                       <span className="font-semibold text-brand-900">
                         {voucher?.full_name ?? "A colleague"}
                         {voucherProfile?.job_title

@@ -1,12 +1,27 @@
 /**
- * /jobs — every open role on Vouch.
+ * /jobs — every open role on Vouch, and the seeker's filters over them.
+ *
+ * This is also where a seeker lands when they sign in, rather than the
+ * dashboard: the roles are what they came for.
  */
 
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { currentProfile } from "@/lib/auth";
+import {
+  FILTER_COOKIE,
+  filtersFromCookie,
+  filtersFromParams,
+  filtersToQuery,
+  noFilters,
+  type JobFilters,
+} from "@/lib/job-filters";
 import { AppHeader } from "@/components/app-header";
+import { Avatar } from "@/components/avatar";
+import { HelloOverlay } from "@/components/hello-overlay";
+import { ClearFiltersButton, JobFilters as JobFilterBar } from "@/components/job-filters";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,24 +47,99 @@ function pay(job: { pay_type: string; pay_min_cents: number | null; pay_max_cent
   return `${lo && hi ? `${lo}–${hi}` : (lo ?? hi)} ${unit}`;
 }
 
-export default async function JobsPage() {
+/**
+ * The town a role is in, used both as the filter's value and its label.
+ *
+ * City rather than the location's own label, because a label is a branch name
+ * ("Riverside Store") and nobody searches for one of those.
+ */
+function cityOf(job: { locations?: unknown }): string | null {
+  const l = Array.isArray(job.locations) ? job.locations[0] : job.locations;
+  const city = (l as { city?: string | null } | null)?.city;
+  return city?.trim() || null;
+}
+
+export default async function JobsPage(props: PageProps<"/jobs">) {
   const profile = await currentProfile();
   if (!profile) redirect("/login");
 
-  const supabase = await createClient();
-  const { data: jobs } = await supabase
-    .from("jobs")
-    .select("id, title, pay_type, pay_min_cents, pay_max_cents, created_at, companies(name, verification_tier), locations(label, city, region)")
-    .eq("status", "open")
-    .order("created_at", { ascending: false });
+  const params = await props.searchParams;
 
-  // Which ones have they already asked about?
-  const { data: mine } = await supabase.from("intro_requests").select("job_id, status");
+  // The address bar is the truth whenever it says anything. Only when it is
+  // silent do we fall back on what this browser was filtering by last — which
+  // is what makes the filters survive a trip into a role and back.
+  const fromUrl = filtersFromParams(params);
+  if (noFilters(fromUrl)) {
+    const jar = await cookies();
+    const remembered = filtersFromCookie(jar.get(FILTER_COOKIE)?.value);
+    if (!noFilters(remembered)) {
+      // Sent to the address bar rather than just applied quietly, so the page
+      // and the address agree and Back behaves. This cannot loop: the address
+      // it redirects to always carries a filter, so the next time round
+      // `fromUrl` is not empty and this branch is skipped.
+      const query = filtersToQuery(remembered);
+      redirect(`/jobs${query}${params.hello === "1" ? `${query ? "&" : "?"}hello=1` : ""}`);
+    }
+  }
+  const filters: JobFilters = fromUrl;
+
+  const supabase = await createClient();
+
+  const [{ data: allJobs }, { data: mine }, { data: categoryRows }] = await Promise.all([
+    supabase
+      .from("jobs")
+      .select("id, title, category, pay_type, pay_min_cents, pay_max_cents, created_at, companies(name, verification_tier, logo_url), locations(label, city, region)")
+      .eq("status", "open")
+      .order("created_at", { ascending: false }),
+    // Which ones have they already asked about?
+    supabase.from("intro_requests").select("job_id, status"),
+    supabase
+      .from("job_categories")
+      .select("slug, label")
+      .eq("is_active", true)
+      .order("sort_order"),
+  ]);
+
   const asked = new Map((mine ?? []).map((r) => [r.job_id as string, r.status as string]));
   const openCount = (mine ?? []).filter((r) => r.status === "pending").length;
 
+  // Every open role is fetched and the filtering happens here rather than in
+  // the database. That is the right trade at this size: it is one query
+  // instead of three, and it means the dropdowns can only ever offer
+  // categories and towns that genuinely have a role in them — a filter that
+  // returns nothing is worse than no filter.
+  //
+  // Migration 0014 adds the indexes this would need if the board outgrows it.
+  // The moment "every open role" stops being a few hundred rows, move the two
+  // `.filter` calls below into `.eq()` on the query above.
+  const jobs = (allJobs ?? []).filter((job) => {
+    if (filters.category && job.category !== filters.category) return false;
+    if (filters.location && cityOf(job) !== filters.location) return false;
+    return true;
+  });
+
+  // The dropdowns' contents, built from what is actually posted.
+  const presentCategories = new Set((allJobs ?? []).map((j) => j.category).filter(Boolean));
+  const categoryOptions = (categoryRows ?? [])
+    .filter((c) => presentCategories.has(c.slug as string))
+    .map((c) => ({ value: c.slug as string, label: c.label as string }));
+
+  const locationOptions = Array.from(
+    new Set((allJobs ?? []).map(cityOf).filter((c): c is string => Boolean(c))),
+  )
+    .sort((a, b) => a.localeCompare(b))
+    .map((city) => ({ value: city, label: city }));
+
+  // A seeker arriving straight from signing in gets the greeting here, since
+  // this is now where they land instead of the dashboard.
+  const greet = params.hello === "1";
+
+  const filtering = !noFilters(filters);
+
   return (
     <>
+      {greet ? <HelloOverlay /> : null}
+
       <AppHeader profile={profile} />
 
       <main className="mx-auto w-full max-w-4xl px-6 py-10 sm:py-14">
@@ -62,12 +152,31 @@ export default async function JobsPage() {
           ) : null}
         </div>
         <p className="measure mt-3 text-lg text-muted-foreground">
-          {jobs?.length ?? 0} roles hiring through Vouch. Ask for an intro and a
-          verified employee there decides whether to vouch for you.
+          {filtering ? (
+            <>
+              {jobs.length} of {allJobs?.length ?? 0} roles match your filters.
+            </>
+          ) : (
+            <>
+              {jobs.length} roles hiring through Vouch. Ask for an intro and a
+              verified employee there decides whether to vouch for you.
+            </>
+          )}
         </p>
 
+        {/* Only offered when there is something to narrow. Two dropdowns over
+            an empty board are furniture. */}
+        {(allJobs?.length ?? 0) > 0 ? (
+          <JobFilterBar
+            filters={filters}
+            categories={categoryOptions}
+            locations={locationOptions}
+            resultCount={jobs.length}
+          />
+        ) : null}
+
         <div className="mt-10 space-y-4">
-        {(jobs ?? []).map((job) => {
+        {jobs.map((job) => {
           const company = Array.isArray(job.companies) ? job.companies[0] : job.companies;
           const location = Array.isArray(job.locations) ? job.locations[0] : job.locations;
           const status = asked.get(job.id as string);
@@ -76,11 +185,16 @@ export default async function JobsPage() {
           return (
             <Card key={job.id as string} interactive className="group">
               <CardHeader>
+                <div className="flex items-start gap-3">
+                  <Avatar src={company?.logo_url} name={company?.name} contain />
+                  <div className="min-w-0 flex-1">
                 <CardTitle className="text-lg">
                   {/* The whole card is the target, not just the words — the
-                      stretched link covers it so a thumb can land anywhere. */}
+                      stretched link covers it so a thumb can land anywhere.
+                      The filters ride along, so "All roles" on the far side
+                      comes back to this same filtered list. */}
                   <Link
-                    href={`/jobs/${job.id}`}
+                    href={`/jobs/${job.id}${filtersToQuery(filters)}`}
                     className="after:absolute after:inset-0 after:content-[''] group-hover/card:text-brand-800"
                   >
                     {job.title as string}
@@ -103,6 +217,8 @@ export default async function JobsPage() {
                     </span>
                   ) : null}
                 </p>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="flex flex-wrap items-center justify-between gap-3">
                 <p className="tabular text-sm font-semibold">
@@ -130,14 +246,30 @@ export default async function JobsPage() {
           );
         })}
 
-          {(jobs ?? []).length === 0 ? (
+          {jobs.length === 0 ? (
             <Card>
               <CardContent className="py-6 text-center">
-                <p className="font-semibold">No open roles right now.</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  New roles appear here as employers post them. Nothing is
-                  scraped, so everything you see was posted by a real company.
-                </p>
+                {filtering ? (
+                  <>
+                    <p className="font-semibold">
+                      No roles match what you&apos;re filtering by.
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      There {(allJobs?.length ?? 0) === 1 ? "is" : "are"}{" "}
+                      {allJobs?.length ?? 0} other{" "}
+                      {(allJobs?.length ?? 0) === 1 ? "role" : "roles"} open.
+                    </p>
+                    <ClearFiltersButton className="mt-4" />
+                  </>
+                ) : (
+                  <>
+                    <p className="font-semibold">No open roles right now.</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      New roles appear here as employers post them. Nothing is
+                      scraped, so everything you see was posted by a real company.
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
           ) : null}

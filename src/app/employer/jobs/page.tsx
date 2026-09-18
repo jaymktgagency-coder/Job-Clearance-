@@ -43,6 +43,14 @@ export default async function EmployerJobsPage() {
     .eq("is_active", true)
     .order("label");
 
+  // The categories a role can be filed under, so the seeker's filter has
+  // something to match on.
+  const { data: categories } = await supabase
+    .from("job_categories")
+    .select("slug, label")
+    .eq("is_active", true)
+    .order("sort_order");
+
   // What a hire costs, straight from your settings table.
   const { data: settings } = await supabase
     .from("platform_settings")
@@ -149,6 +157,7 @@ export default async function EmployerJobsPage() {
         <CardContent>
           <NewJobForm
             locations={(locations ?? []) as { id: string; label: string }[]}
+            categories={(categories ?? []) as { slug: string; label: string }[]}
             tier1={money(latest("fee_tier_1_cents", 50000))}
             tier2={money(latest("fee_tier_2_cents", 200000))}
           />

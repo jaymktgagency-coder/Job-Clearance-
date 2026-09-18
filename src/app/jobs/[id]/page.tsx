@@ -7,9 +7,11 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { currentProfile } from "@/lib/auth";
+import { filtersFromParams, jobsHref } from "@/lib/job-filters";
 import { AiNotice } from "@/components/ai-notice";
 import { RequestForm } from "./RequestForm";
 import { AppHeader } from "@/components/app-header";
+import { Avatar } from "@/components/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,11 +29,13 @@ export default async function JobPage(props: PageProps<"/jobs/[id]">) {
   if (!profile) redirect("/login");
 
   const { id } = await props.params;
+  // The filters the seeker arrived with, so the way back keeps them.
+  const params = await props.searchParams;
   const supabase = await createClient();
 
   const { data: job } = await supabase
     .from("jobs")
-    .select("id, title, description, pay_type, pay_min_cents, pay_max_cents, status, companies(name, description, verification_tier), locations(label, city, region)")
+    .select("id, title, description, pay_type, pay_min_cents, pay_max_cents, status, companies(name, description, verification_tier, logo_url), locations(label, city, region)")
     .eq("id", id)
     .maybeSingle();
 
@@ -59,14 +63,29 @@ export default async function JobPage(props: PageProps<"/jobs/[id]">) {
       <AppHeader profile={profile} />
 
       <main className="mx-auto w-full max-w-2xl px-6 py-10 sm:py-14">
-        <Button variant="ghost" className="px-3" render={<Link href="/jobs" />}>
+        {/* Carries the filters back with it, so a seeker who narrowed the
+            list to "Retail in Austin" returns to that and not to everything.
+            The cookie would restore them anyway; this just saves the redirect. */}
+        <Button
+          variant="ghost"
+          className="px-3"
+          render={<Link href={jobsHref(filtersFromParams(params))} />}
+        >
           <ArrowLeftIcon aria-hidden="true" />
           All roles
         </Button>
 
-        <h1 className="mt-5 text-3xl font-semibold sm:text-4xl">
-          {job.title as string}
-        </h1>
+        <div className="mt-5 flex items-start gap-4">
+          <Avatar
+            src={company?.logo_url}
+            name={company?.name}
+            size="lg"
+            contain
+          />
+          <h1 className="text-3xl font-semibold sm:text-4xl">
+            {job.title as string}
+          </h1>
+        </div>
         <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-muted-foreground">
           <span className="font-semibold text-foreground">{company?.name}</span>
           {company?.verification_tier && company.verification_tier !== "none" ? (

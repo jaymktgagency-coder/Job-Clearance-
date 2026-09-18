@@ -20,7 +20,7 @@
 import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { hashInviteToken } from "@/lib/invites";
-import { pendingInviteToken, pendingRole, type Role } from "@/lib/auth";
+import { pendingInviteToken, pendingRole, type Role, homeFor } from "@/lib/auth";
 import { isFreeEmailDomain } from "@/lib/email-domains";
 
 export type OnboardingState = { error: string | null };
@@ -61,7 +61,9 @@ export async function completeOnboarding(
       { onConflict: "user_id" },
     );
     if (error) return { error: `We couldn't save your profile: ${error.message}` };
-    redirect("/dashboard");
+    // A seeker who has just finished signing up wants the roles, not a
+    // dashboard summarising the nothing they have done so far.
+    redirect(homeFor("seeker"));
   }
 
   if (role === "employer") {
