@@ -221,6 +221,14 @@ anywhere else. The one rule worth knowing before touching a screen: orange as
 a *surface* carries near-black text (7.0:1), orange as *text* is always the
 darker `--brand-700` (5.8:1). White on bright orange is 2.6:1 and fails.
 
+**Tailwind v4 moves things with `translate` and `scale`, not `transform`.**
+A transition naming `transform` animates nothing, silently, and looks fine in
+a screenshot. **And a utility class outranks anything in `@layer base`** — so
+`outline-none` on a component beats the global `:focus-visible` ring and makes
+it invisible to keyboard users. Both of these shipped once and were caught
+only by reading computed styles off a live page. `/design` is the parts
+catalogue; it needs no login and renders without a database.
+
 **Supabase gotchas:** errors are plain objects, not `Error` — check
 `"message" in error`. `head: true` returns 204 with a null count on a missing
 table; use `.select("id", { count: "exact" }).limit(1)`. Uploading a `Blob`

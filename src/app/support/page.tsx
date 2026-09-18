@@ -9,7 +9,10 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowLeftIcon } from "lucide-react";
+
 import { LEGAL, legalDetailsIncomplete } from "@/lib/legal";
+import { FormError } from "@/components/form-message";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -50,12 +53,13 @@ export default function SupportPage() {
   const incomplete = legalDetailsIncomplete();
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-12">
-      <Button variant="ghost" size="sm" render={<Link href="/" />}>
-        ← Vouch
+    <main className="mx-auto w-full max-w-2xl px-6 py-10 sm:py-14">
+      <Button variant="ghost" className="px-3" render={<Link href="/" />}>
+        <ArrowLeftIcon aria-hidden="true" />
+        Vouch
       </Button>
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight">Support</h1>
-      <p className="mt-2 text-muted-foreground">
+      <h1 className="mt-5 text-3xl font-semibold sm:text-4xl">Support</h1>
+      <p className="measure mt-3 text-lg text-muted-foreground">
         A person reads this inbox. Tell us what happened and we&apos;ll come back to
         you within five working days — sooner if money is involved.
       </p>
@@ -64,72 +68,79 @@ export default function SupportPage() {
           It is here because a site with placeholder company details is not
           ready to take a payment, and that is easy to forget. */}
       {incomplete ? (
-        <div
-          role="alert"
-          className="mt-6 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          <strong className="font-medium">Not ready to take payments.</strong> The
-          company name, address, and support email on this site are still
-          placeholders. Fill them in at <code>src/lib/legal.ts</code> before
-          applying to Stripe — placeholder details are a common reason
-          marketplace applications are sent back.
-        </div>
+        <FormError className="mt-6">
+          <strong className="font-semibold">Not ready to take payments.</strong>{" "}
+          The company name, address, and support email on this site are still
+          placeholders. Fill them in at{" "}
+          <code className="font-mono">src/lib/legal.ts</code> before applying to
+          Stripe — placeholder details are a common reason marketplace
+          applications are sent back.
+        </FormError>
       ) : null}
 
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle className="text-base">Get in touch</CardTitle>
+          <CardTitle>Get in touch</CardTitle>
           <CardDescription>
             Email is the only channel, and it is a real one.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <p>
-            <strong className="font-medium">General and billing:</strong>{" "}
-            <a className="underline underline-offset-4" href={`mailto:${LEGAL.supportEmail}`}>
+        <CardContent className="space-y-4 text-sm">
+          <div>
+            <p className="font-semibold">General and billing</p>
+            <a
+              className="font-medium text-brand-700 underline underline-offset-[0.2em] hover:text-brand-900"
+              href={`mailto:${LEGAL.supportEmail}`}
+            >
               {LEGAL.supportEmail}
             </a>
-          </p>
-          <p>
-            <strong className="font-medium">Privacy and data requests:</strong>{" "}
-            <a className="underline underline-offset-4" href={`mailto:${LEGAL.privacyEmail}`}>
+          </div>
+          <div>
+            <p className="font-semibold">Privacy and data requests</p>
+            <a
+              className="font-medium text-brand-700 underline underline-offset-[0.2em] hover:text-brand-900"
+              href={`mailto:${LEGAL.privacyEmail}`}
+            >
               {LEGAL.privacyEmail}
             </a>
-          </p>
-          <p className="text-muted-foreground">
+          </div>
+          <address className="rounded-lg bg-sunken p-4 text-muted-foreground not-italic">
             {LEGAL.entityName}
             <br />
             {LEGAL.address}
-          </p>
-          <p className="text-muted-foreground">
+          </address>
+          <p className="measure text-muted-foreground">
             Including the role title and the other person&apos;s name gets you a
             useful answer first time.
           </p>
         </CardContent>
       </Card>
 
-      <h2 className="mt-10 text-xl font-semibold tracking-tight">Common questions</h2>
-      <div className="mt-4 space-y-4">
+      <h2 className="mt-14 text-2xl font-semibold sm:text-3xl">
+        Common questions
+      </h2>
+      {/* A definition list rather than a stack of cards: these are questions
+          and their answers, and nesting each pair in its own box makes a page
+          you scroll instead of one you read. */}
+      <dl className="mt-6 divide-y divide-border overflow-hidden rounded-lg bg-card shadow-raised">
         {FAQ.map((item) => (
-          <Card key={item.q}>
-            <CardHeader>
-              <CardTitle className="text-base">{item.q}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>{item.a}</CardDescription>
-            </CardContent>
-          </Card>
+          <div key={item.q} className="p-5 sm:p-6">
+            <dt className="font-heading text-base font-semibold">{item.q}</dt>
+            <dd className="measure mt-2 text-sm text-muted-foreground">
+              {item.a}
+            </dd>
+          </div>
         ))}
-      </div>
+      </dl>
 
-      <div className="mt-10 flex flex-wrap gap-3 border-t pt-6">
-        <Button variant="outline" size="sm" render={<Link href="/terms" />}>
+      <div className="mt-12 flex flex-wrap gap-3 border-t border-border pt-8">
+        <Button variant="outline" render={<Link href="/terms" />}>
           Terms of Service
         </Button>
-        <Button variant="outline" size="sm" render={<Link href="/privacy" />}>
+        <Button variant="outline" render={<Link href="/privacy" />}>
           Privacy Policy
         </Button>
-        <Button variant="outline" size="sm" render={<Link href="/refunds" />}>
+        <Button variant="outline" render={<Link href="/refunds" />}>
           Refund policy
         </Button>
       </div>

@@ -81,7 +81,7 @@ export default async function CandidatesPage(props: PageProps<"/employer/jobs/[i
       <AppHeader profile={profile} />
 
       <main className="mx-auto w-full max-w-3xl px-6 py-10 sm:py-14">
-      <Button variant="ghost" size="sm" render={<Link href="/employer/jobs" />}>
+      <Button variant="ghost" className="px-3" render={<Link href="/employer/jobs" />}>
         <ArrowLeftIcon aria-hidden="true" />
         Your roles
       </Button>

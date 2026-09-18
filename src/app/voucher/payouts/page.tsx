@@ -83,7 +83,7 @@ export default async function VoucherPayoutsPage(props: PageProps<"/voucher/payo
       <AppHeader profile={profile} />
 
       <main className="mx-auto w-full max-w-2xl px-6 py-10 sm:py-14">
-      <Button variant="ghost" size="sm" render={<Link href="/dashboard" />}>
+      <Button variant="ghost" className="px-3" render={<Link href="/dashboard" />}>
         <ArrowLeftIcon aria-hidden="true" />
         Dashboard
       </Button>

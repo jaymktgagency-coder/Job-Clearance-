@@ -27,7 +27,11 @@ export function SiteFooter() {
             <Link
               key={l.href}
               href={l.href}
-              className="underline-offset-[0.2em] transition-colors duration-[160ms] ease-out hover:text-brand-700 hover:underline"
+              /* The text stays the size it looks; the TAP TARGET is padded
+                 out to 44px. These measured 20px tall, which is a miss
+                 waiting to happen on a tablet. The negative margin keeps the
+                 row looking the same as before. */
+              className="-mx-1.5 -my-2 inline-flex min-h-11 items-center px-1.5 underline-offset-[0.2em] transition-colors duration-[160ms] ease-out hover:text-brand-700 hover:underline"
             >
               {l.label}
             </Link>

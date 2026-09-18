@@ -68,7 +68,7 @@ export default async function BillingPage(props: PageProps<"/employer/billing">)
       <>
         <AppHeader profile={profile} />
         <main className="mx-auto w-full max-w-2xl px-6 py-10 sm:py-14">
-          <Button variant="ghost" size="sm" render={<Link href="/employer/jobs" />}>
+          <Button variant="ghost" className="px-3" render={<Link href="/employer/jobs" />}>
             <ArrowLeftIcon aria-hidden="true" />
             Your roles
           </Button>
@@ -143,7 +143,7 @@ export default async function BillingPage(props: PageProps<"/employer/billing">)
       <AppHeader profile={profile} />
 
       <main className="mx-auto w-full max-w-2xl px-6 py-10 sm:py-14">
-      <Button variant="ghost" size="sm" render={<Link href="/employer/jobs" />}>
+      <Button variant="ghost" className="px-3" render={<Link href="/employer/jobs" />}>
         <ArrowLeftIcon aria-hidden="true" />
         Your roles
       </Button>

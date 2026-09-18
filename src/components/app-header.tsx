@@ -45,7 +45,7 @@ export function AppHeader({ profile }: { profile: Profile }) {
       <div className="mx-auto flex w-full max-w-5xl items-center gap-4 px-6 py-3">
         <Link
           href="/dashboard"
-          className="font-heading text-lg font-semibold tracking-[-0.03em] transition-colors duration-[160ms] ease-out hover:text-brand-700"
+          className="font-heading inline-flex min-h-11 items-center text-lg font-semibold tracking-[-0.03em] transition-colors duration-[160ms] ease-out hover:text-brand-700"
         >
           Vouch
         </Link>
@@ -58,10 +58,12 @@ export function AppHeader({ profile }: { profile: Profile }) {
             second line and pushing the page down. */}
         <nav className="-mx-2 flex flex-1 items-center gap-1 overflow-x-auto px-2">
           {NAV[profile.role].map((item) => (
+            /* Full 44px height, with the horizontal padding pulled in so
+               three of them still fit across a phone. */
             <Button
               key={item.href}
               variant="ghost"
-              size="sm"
+              className="px-3"
               render={<Link href={item.href} />}
             >
               {item.label}
@@ -70,7 +72,7 @@ export function AppHeader({ profile }: { profile: Profile }) {
         </nav>
 
         <form action={signOut}>
-          <Button type="submit" variant="ghost" size="sm">
+          <Button type="submit" variant="ghost" className="px-3">
             Sign out
           </Button>
         </form>

@@ -47,10 +47,16 @@ const buttonVariants = cva(
     "transition-[translate,scale,box-shadow,background-color,border-color,color,opacity]",
     "duration-[160ms] ease-spring",
     "active:duration-[90ms] active:ease-enter",
-    // Focus ring is drawn by the global :focus-visible rule in globals.css, so
-    // it is identical on every focusable thing in the product and can never be
-    // accidentally removed here.
-    "outline-none",
+    // The focus ring, stated explicitly and never with `outline-none`.
+    //
+    // This was wrong until it was measured. The class here used to be
+    // `outline-none`, on the assumption that the global :focus-visible rule in
+    // globals.css would still draw the ring. It does not: that rule lives in
+    // Tailwind's `base` layer and every utility class outranks it, so
+    // `outline-none` silently won and EVERY button in the product was
+    // invisible to anyone navigating by keyboard. It looked completely fine
+    // in a screenshot, because a screenshot never presses Tab.
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500",
     // Disabled: no pointer, no lift, no shadow. A dead button should look dead.
     "disabled:pointer-events-none disabled:opacity-45 disabled:shadow-none disabled:translate-y-0",
     "aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",

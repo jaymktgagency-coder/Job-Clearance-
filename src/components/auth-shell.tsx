@@ -34,7 +34,7 @@ export function AuthShell({
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-14 sm:py-20">
       <Link
         href="/"
-        className="font-heading self-start text-lg font-semibold tracking-[-0.03em] transition-colors duration-[160ms] ease-out hover:text-brand-700"
+        className="font-heading inline-flex min-h-11 items-center self-start text-lg font-semibold tracking-[-0.03em] transition-colors duration-[160ms] ease-out hover:text-brand-700"
       >
         Vouch
       </Link>

@@ -154,6 +154,32 @@ no visitor request ever leaves for Google.
 
 ---
 
+## Two things that were measured, not assumed
+
+Both of these looked completely correct and were completely broken. Neither
+would ever show up in a screenshot.
+
+**Buttons animated the wrong property.** The transition named `transform`;
+Tailwind v4 moves things with the separate `translate` and `scale`
+properties. So the transition applied to a property nothing was changing, and
+every button jumped instantly with no spring at all. Caught by reading the
+computed style off a live page.
+
+**Every button was invisible to keyboard focus.** The base class carried
+`outline-none`, on the assumption that the global `:focus-visible` rule would
+still draw the ring. It does not: that rule lives in Tailwind's `base` layer
+and any utility class outranks it, so `outline-none` silently won. Caught by
+pressing Tab twenty-five times in a script and reading `outlineStyle` at each
+stop. The ring is now stated explicitly on the component.
+
+The lesson worth keeping: **if a check cannot fail, it is not a check.** An
+audit that reports everything passing on the first run is usually a broken
+ruler — the first contrast script wrote off all 365 nodes, including a
+headline known to be 17.7:1, because it was parsing Chromium's `lab()` colour
+strings as RGB.
+
+---
+
 ## The parts we did not draw
 
 Text selection, the typing caret, the scrollbar and the focus ring ship
@@ -189,3 +215,18 @@ Stripe flows, the webhook, migrations, `src/lib/**`, the AI layer.
 the high-energy treatment runs across working screens too, not just the
 landing page, with the floor that contrast and scanability never drop below
 usable on data-heavy screens like `/employer/billing`.
+
+### Known, and deliberately left
+
+- **An automated design check flags `--ease-spring` as "bounce easing".** It
+  stays. A satisfying press was an explicit requirement, and the reference the
+  look was built against uses a far larger overshoot. See the note in
+  `globals.css` before changing it.
+- **`/support` states "$500" and "$2,000" as literal text**, which breaks the
+  never-hardcode-money rule. It predates this pass. It cannot be fixed without
+  a database change: `platform_settings` is readable only by logged-in users
+  (`platform_settings_read_all` is `to authenticated`) and `/support` is
+  public. The home page dodges this by selling the shape of the deal instead
+  of the figures. Fixing `/support` properly needs an `anon` read policy.
+- **No dark-mode toggle.** The tokens are complete and coherent, so adding one
+  is a switch, not a project.

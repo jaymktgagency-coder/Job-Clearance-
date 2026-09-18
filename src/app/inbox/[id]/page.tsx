@@ -70,7 +70,7 @@ export default async function RequestPage(props: PageProps<"/inbox/[id]">) {
       <AppHeader profile={profile} />
 
       <main className="mx-auto w-full max-w-2xl px-6 py-10 sm:py-14">
-      <Button variant="ghost" size="sm" render={<Link href="/inbox" />}>
+      <Button variant="ghost" className="px-3" render={<Link href="/inbox" />}>
         <ArrowLeftIcon aria-hidden="true" />
         Inbox
       </Button>
