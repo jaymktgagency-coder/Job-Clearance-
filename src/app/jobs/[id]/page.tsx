@@ -143,6 +143,9 @@ export default async function JobPage(props: PageProps<"/jobs/[id]">) {
                 <RequestForm
                   jobId={job.id as string}
                   atCap={(openCount ?? 0) >= 5}
+                  sourceOutreachId={
+                    typeof params.outreach === "string" ? params.outreach : undefined
+                  }
                 />
               )}
               <AiNotice />
