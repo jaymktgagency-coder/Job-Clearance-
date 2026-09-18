@@ -202,3 +202,36 @@ export async function reportHire(
       "Recorded. Nothing is owed until they confirm it too — we'll ask them. The voucher's share releases 60 days after the start date.",
   };
 }
+
+/**
+ * Files an existing role under a category.
+ *
+ * Plain English: the category picker used to be on the "post a role" form
+ * only, so every role posted before categories existed had no way of ever
+ * getting one — and a seeker's Category filter has nothing to offer until at
+ * least one role does. This is that missing half.
+ *
+ * An empty value puts the role back to having no category, which is allowed:
+ * a role with none simply does not appear under one.
+ */
+export async function setJobCategory(formData: FormData): Promise<void> {
+  const jobId = String(formData.get("job_id") ?? "");
+  if (!jobId) return;
+
+  const ctx = await employerCompany();
+  if (!ctx) return;
+
+  const category = String(formData.get("category") ?? "").trim();
+
+  // A made-up slug cannot get through: `jobs.category` is a foreign key onto
+  // job_categories, so the database rejects it whatever is posted here.
+  await ctx.supabase
+    .from("jobs")
+    .update({ category: category || null })
+    .eq("id", jobId)
+    .eq("company_id", ctx.companyId);
+
+  revalidatePath("/employer/jobs");
+  revalidatePath("/jobs");
+}
+

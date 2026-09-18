@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { currentProfile } from "@/lib/auth";
 import { NewJobForm } from "./NewJobForm";
+import { JobCategoryPicker } from "./JobCategoryPicker";
 import { setJobStatus } from "../actions";
 import { AppHeader } from "@/components/app-header";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +34,7 @@ export default async function EmployerJobsPage() {
 
   const { data: jobs } = await supabase
     .from("jobs")
-    .select("id, title, status, pay_type, fee_amount_cents, created_at, applications(id, status)")
+    .select("id, title, status, category, pay_type, fee_amount_cents, created_at, applications(id, status)")
     .order("created_at", { ascending: false });
 
   const { data: locations } = await supabase
@@ -43,8 +44,8 @@ export default async function EmployerJobsPage() {
     .eq("is_active", true)
     .order("label");
 
-  // The categories a role can be filed under, so the seeker's filter has
-  // something to match on.
+  // The categories a role can be filed under — used both by the "post a role"
+  // form and by the per-role picker on the list below.
   const { data: categories } = await supabase
     .from("job_categories")
     .select("slug, label")
@@ -101,7 +102,16 @@ export default async function EmployerJobsPage() {
                   {live !== apps.length ? ` · ${live} still open` : ""}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-wrap items-center justify-between gap-3">
+              <CardContent className="space-y-3">
+                {/* Roles posted before categories existed have none, and a
+                    seeker's Category filter stays empty until they do. */}
+                <JobCategoryPicker
+                  jobId={job.id as string}
+                  current={(job.category as string | null) ?? null}
+                  categories={(categories ?? []) as { slug: string; label: string }[]}
+                />
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
                     size="sm"
@@ -130,6 +140,7 @@ export default async function EmployerJobsPage() {
                   </span>{" "}
                   if you hire
                 </p>
+                </div>
               </CardContent>
             </Card>
           );
