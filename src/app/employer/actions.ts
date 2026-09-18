@@ -54,6 +54,7 @@ export async function createJob(_prev: JobState, formData: FormData): Promise<Jo
   const description = String(formData.get("description") ?? "").trim();
   const payType = String(formData.get("pay_type") ?? "");
   const locationId = String(formData.get("location_id") ?? "").trim();
+  const category = String(formData.get("category") ?? "").trim();
   const publish = formData.get("publish") === "on";
 
   if (!title) return { error: "Please give the role a title." };
@@ -79,6 +80,11 @@ export async function createJob(_prev: JobState, formData: FormData): Promise<Jo
     .insert({
       company_id: ctx.companyId,
       location_id: locationId || null,
+      // What the seeker's Category filter matches on. Empty is allowed — a
+      // role with no category simply does not appear under one. A made-up
+      // value cannot get through: the column is a foreign key onto
+      // job_categories, so the database rejects it.
+      category: category || null,
       posted_by: ctx.user.id,
       title,
       description,

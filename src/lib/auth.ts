@@ -17,6 +17,8 @@ export type Profile = {
   role: Role;
   full_name: string | null;
   email: string;
+  /** Their profile picture, or null. One more column on a query that already runs. */
+  avatar_url: string | null;
 };
 
 /** The logged-in person, or null. Cheap — no database round trip. */
@@ -37,7 +39,7 @@ export async function currentProfile(): Promise<Profile | null> {
 
   const { data } = await supabase
     .from("users")
-    .select("id, role, full_name, email")
+    .select("id, role, full_name, email, avatar_url")
     .eq("id", auth.user.id)
     .maybeSingle();
 
@@ -65,3 +67,25 @@ export const ROLE_LABEL: Record<Role, string> = {
   voucher: "Voucher",
   employer: "Employer",
 };
+
+/**
+ * Where each role lands after signing in.
+ *
+ * A seeker's first screen is the list of open roles, not their dashboard. The
+ * dashboard is a summary of things they have already done, which on day one
+ * is nothing at all — the jobs are the reason they came.
+ *
+ * The other two roles keep the dashboard, because theirs genuinely is the
+ * first thing they need: a voucher's waiting requests, an employer's roles
+ * and verification progress.
+ *
+ * `/dashboard` stays reachable for everyone from the Vouch logo in the header.
+ */
+export function homeFor(role: Role): string {
+  return role === "seeker" ? "/jobs" : "/dashboard";
+}
+
+/** The same, with the flag that plays the "hello" animation once on arrival. */
+export function homeAfterSignIn(role: Role): string {
+  return `${homeFor(role)}?hello=1`;
+}

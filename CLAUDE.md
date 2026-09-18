@@ -110,13 +110,16 @@ src/
     (auth)/login,signup   onboarding/   dashboard/   invite/[token]/  verify/
     profile/              jobs/[id]/    requests/     inbox/[id]/
     employer/jobs/[id]/   employer/billing/           api/stripe/webhook/
+    employer/company/     voucher/profile/  -- each role's own profile page
     terms/ privacy/ refunds/ support/   setup/
     hires/actions.ts      -- separation flow, shared by both sides
   components/  ai-notice, parsed-resume, separation-panel, site-footer, legal/, ui/
                hello-lottie (the greeting), hello-overlay (the post-login moment)
+               avatar, picture-form, job-filters, ui/skeleton
   assets/      hello-apple.json -- the greeting animation, as downloaded
   lib/
     env.ts legal.ts auth.ts invites.ts email.ts email-domains.ts verification-codes.ts
+    avatars.ts job-filters.ts
     supabase/{client,server,health,db-status}.ts
     ai/{client,resume-file,parse-resume,score-fit,run}.ts
     stripe/{client,payment-methods}.ts
@@ -127,8 +130,8 @@ scripts/                 seed.mts, ai-backfill.mts
 tests/                   7 browser tests (.mjs) + ai-layer.mts + stripe-9a.mts
 ```
 
-20 tables, 1 view (`voucher_reputation`, security_invoker), 17 enums,
-56 RLS policies.
+21 tables, 1 view (`voucher_reputation`, security_invoker), 17 enums,
+57 RLS policies.
 
 ## The security guards, and why each exists
 
@@ -235,6 +238,29 @@ it invisible to keyboard users. Both of these shipped once and were caught
 only by reading computed styles off a live page. `/design` is the parts
 catalogue; it needs no login and renders without a database.
 
+**Each role lands somewhere different.** `homeFor()` in `lib/auth.ts` is the
+only place that decides: a seeker goes to `/jobs`, everyone else to
+`/dashboard`. `/dashboard` stays reachable from the logo. The `?hello=1`
+greeting follows whatever that function returns.
+
+**Seeker job filters live in two places, on purpose.** The address bar is the
+truth; a session cookie (`vouch_job_filters`) is the fallback for arriving
+with no query string, which is what makes filters survive a trip into a role.
+The URL always wins, so the cookie can never overrule a filter just set. The
+"Clear" control must be a button, not a link to `/jobs` — a link would be
+undone by the cookie on the next render.
+
+**`/jobs` filters in JavaScript, not SQL.** One query for every open role,
+then filtered in memory, so the dropdowns can only ever offer categories and
+towns that have a role in them. 0014 ships the indexes for the day that stops
+being a few hundred rows; the comment in `jobs/page.tsx` says what to change.
+
+**The `avatars` bucket is public, `resumes` is not.** A resume is read one at
+a time by someone who earned it, so signing a URL is cheap. An avatar appears
+beside every name in a list, so signing one per row would be dozens of round
+trips. The protection is an unguessable path (`<user-id>/<uuid>.<ext>`), and
+account deletion erases the file — a public file is still personal data.
+
 **Supabase gotchas:** errors are plain objects, not `Error` — check
 `"message" in error`. `head: true` returns 204 with a null count on a missing
 table; use `.select("id", { count: "exact" }).limit(1)`. Uploading a `Blob`
@@ -283,6 +309,8 @@ failures.
 | `0010_payment_methods_and_company_trust.sql` | Stripe columns; badges and domain claims are platform-only |
 | `0011_collect_the_fee.sql` | Collect the fee off-session; **no payout releases against an unpaid charge** |
 | `0012_voucher_payout_accounts.sql` | Stripe Connect recipient accounts; paying needs an account Stripe enabled |
+| `0013_profile_pictures.sql` | Public `avatars` bucket. **No new columns** — `users.avatar_url` and `companies.logo_url` existed from 0001 |
+| `0014_job_categories.sql` | `job_categories` lookup table + `jobs.category`; the list is rows, not an enum, so it changes without a migration |
 
 ## Testing
 
@@ -319,6 +347,13 @@ neither can be merged to `main` or exercised end to end.
 
 Still open, in rough priority order:
 
+- **Apply 0013 + 0014 before merging the code that needs them** — the job list
+  reads `jobs.category` and `job_categories`, and the profile pages upload to
+  the `avatars` bucket. Both are dead without the migration.
+- **Radius filter is not built.** Category and Location ship; Radius needs
+  coordinates nobody has — `locations` stores a text address with no lat/lng,
+  and `seeker_profiles.location` is free text. Decide between real ZIP-centroid
+  distance and a coarse city/state scope before building it.
 - Apply 0009 + 0010, verify by attacking as a real user, then merge.
 - 9b charge on confirmed hire · 9c voucher Connect onboarding · 9d the
   release job (Vercel Cron — **nothing runs on a schedule yet**, so

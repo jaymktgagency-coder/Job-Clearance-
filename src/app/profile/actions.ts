@@ -15,6 +15,7 @@ import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { aiIsConfigured } from "@/lib/ai/client";
 import { parseResumeForSeeker } from "@/lib/ai/run";
+import { pictureError, uploadPicture, removeOtherPictures } from "@/lib/avatars";
 
 export type ProfileState = { error: string | null; notice?: string | null };
 
@@ -172,6 +173,55 @@ export async function removeResume(): Promise<void> {
 }
 
 /**
+ * Uploads the seeker's profile picture.
+ *
+ * Unlike the resume, this one is deliberately public: it appears beside their
+ * name in a voucher's inbox and an employer's candidate list, and signing a
+ * private URL for every row of those lists would cost a round trip each. What
+ * protects it is that the address is unguessable — see `lib/avatars.ts`.
+ */
+export async function uploadAvatar(
+  _prev: ProfileState,
+  formData: FormData,
+): Promise<ProfileState> {
+  const ctx = await requireSeeker();
+  if (!ctx) return { error: "You're not signed in any more. Please sign in again." };
+
+  const file = formData.get("picture");
+  const problem = pictureError(file);
+  if (problem) return { error: problem };
+
+  const result = await uploadPicture(ctx.supabase, ctx.user.id, file as File);
+  if ("error" in result) return { error: result.error };
+
+  const { error } = await ctx.supabase
+    .from("users")
+    .update({ avatar_url: result.url })
+    .eq("id", ctx.user.id);
+
+  if (error) return { error: `We couldn't save your picture: ${error.message}` };
+
+  revalidatePath("/profile");
+  return { error: null, notice: "Picture updated." };
+}
+
+/**
+ * Removes it again — the file as well as the link to it.
+ *
+ * Returns nothing, the same as `removeResume` above: the page re-renders
+ * without the picture, which says everything a message would.
+ */
+export async function removeAvatar(): Promise<void> {
+  const ctx = await requireSeeker();
+  if (!ctx) return;
+
+  await removeOtherPictures(ctx.supabase, ctx.user.id);
+  await ctx.supabase.from("users").update({ avatar_url: null }).eq("id", ctx.user.id);
+
+  revalidatePath("/profile");
+}
+
+/**
  * Deletes the account and everything attached to it.
  *
  * Two halves: the files, then the login. Deleting the login cascades through
@@ -195,7 +245,12 @@ export async function deleteAccount(formData: FormData): Promise<void> {
       .remove(files.map((f) => `${ctx.user.id}/${f.name}`));
   }
 
-  // 2. the login — this cascades to every row they own
+  // 2. the profile picture. A public file is still their personal data, and
+  // "delete my account erases everything" has to mean the picture as well —
+  // it would otherwise stay fetchable at its address forever.
+  await removeOtherPictures(admin, ctx.user.id);
+
+  // 3. the login — this cascades to every row they own
   await admin.auth.admin.deleteUser(ctx.user.id);
   await ctx.supabase.auth.signOut();
 

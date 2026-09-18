@@ -8,7 +8,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { currentUser, currentProfile, pendingRole, pendingInviteToken, ROLE_LABEL } from "@/lib/auth";
+import { currentUser, currentProfile, pendingRole, pendingInviteToken, ROLE_LABEL, homeFor, homeAfterSignIn } from "@/lib/auth";
 import { hashInviteToken } from "@/lib/invites";
 import { OnboardingForm } from "./OnboardingForm";
 import { AuthShell } from "@/components/auth-shell";
@@ -28,8 +28,12 @@ export default async function OnboardingPage({
   // be carried the rest of the way to the dashboard.
   const greet = (await searchParams).hello === "1";
 
-  // Already done? Straight through.
-  if (await currentProfile()) redirect(greet ? "/dashboard?hello=1" : "/dashboard");
+  // Already done? Straight through — to wherever this role actually starts,
+  // which for a seeker is the job list rather than the dashboard.
+  const existing = await currentProfile();
+  if (existing) {
+    redirect(greet ? homeAfterSignIn(existing.role) : homeFor(existing.role));
+  }
 
   const role = pendingRole(user.user_metadata);
   if (!role) redirect("/signup");

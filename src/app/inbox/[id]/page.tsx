@@ -10,6 +10,7 @@ import { currentProfile } from "@/lib/auth";
 import { minimumVouchLength } from "../actions";
 import { VouchForm } from "./VouchForm";
 import { AppHeader } from "@/components/app-header";
+import { Avatar } from "@/components/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,24 +27,31 @@ export default async function RequestPage(props: PageProps<"/inbox/[id]">) {
   const { id } = await props.params;
   const supabase = await createClient();
 
-  const { data: vp } = await supabase.from("voucher_profiles").select("status").maybeSingle();
+  // These three do not depend on each other, so they go at once rather than
+  // one after another. Run in sequence this page took four round trips to the
+  // database before it could render a single word, which is what the voucher
+  // was waiting through.
+  const [{ data: vp }, { data: request }, minimum] = await Promise.all([
+    supabase.from("voucher_profiles").select("status").maybeSingle(),
+    supabase
+      .from("intro_requests")
+      .select("id, message, status, created_at, seeker_id, jobs(id, title, description, fee_amount_cents, voucher_share_bps, companies(name, logo_url))")
+      .eq("id", id)
+      .maybeSingle(),
+    minimumVouchLength(),
+  ]);
+
   if (vp?.status !== "verified") redirect("/verify");
-
-  const { data: request } = await supabase
-    .from("intro_requests")
-    .select("id, message, status, created_at, seeker_id, jobs(id, title, description, fee_amount_cents, voucher_share_bps, companies(name))")
-    .eq("id", id)
-    .maybeSingle();
-
   if (!request) notFound();
 
   const job = Array.isArray(request.jobs) ? request.jobs[0] : request.jobs;
   const company = job ? (Array.isArray(job.companies) ? job.companies[0] : job.companies) : null;
 
-  // The seeker: their user row, their profile, and their resume.
+  // The seeker: their user row, their profile, and their resume. This one
+  // genuinely has to wait — it needs the seeker_id the query above returned.
   const { data: person } = await supabase
     .from("users")
-    .select("full_name, seeker_profiles(headline, location, bio, years_experience, skills, desired_titles, resume_path)")
+    .select("full_name, avatar_url, seeker_profiles(headline, location, bio, years_experience, skills, desired_titles, resume_path)")
     .eq("id", request.seeker_id)
     .maybeSingle();
 
@@ -62,7 +70,6 @@ export default async function RequestPage(props: PageProps<"/inbox/[id]">) {
   }
 
   const earns = job ? money((job.fee_amount_cents * job.voucher_share_bps) / 10000) : "$0";
-  const minimum = await minimumVouchLength();
   const stillOpen = request.status === "pending";
 
   return (
@@ -75,14 +82,19 @@ export default async function RequestPage(props: PageProps<"/inbox/[id]">) {
         Inbox
       </Button>
 
-      <h1 className="mt-5 text-3xl font-semibold sm:text-4xl">
-        {person?.full_name ?? "Someone"}
-      </h1>
-      <p className="mt-2 text-muted-foreground">
-        Asking for an intro to{" "}
-        <strong className="font-semibold text-foreground">{job?.title}</strong>{" "}
-        at {company?.name}
-      </p>
+      <div className="mt-5 flex items-center gap-4">
+        <Avatar src={person?.avatar_url} name={person?.full_name} size="lg" />
+        <div>
+          <h1 className="text-3xl font-semibold sm:text-4xl">
+            {person?.full_name ?? "Someone"}
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            Asking for an intro to{" "}
+            <strong className="font-semibold text-foreground">{job?.title}</strong>{" "}
+            at {company?.name}
+          </p>
+        </div>
+      </div>
 
       <Card className="mt-8">
         <CardHeader>

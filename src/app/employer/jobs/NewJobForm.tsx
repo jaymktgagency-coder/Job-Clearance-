@@ -19,10 +19,13 @@ import { Textarea } from "@/components/ui/textarea";
 
 export function NewJobForm({
   locations,
+  categories,
   tier1,
   tier2,
 }: {
   locations: { id: string; label: string }[];
+  /** The Category filter's options, from the job_categories table. */
+  categories: { slug: string; label: string }[];
   tier1: string;
   tier2: string;
 }) {
@@ -113,6 +116,25 @@ export function NewJobForm({
                  placeholder={payType === "salaried" ? "78000" : "23.00"} />
         </div>
       </div>
+
+      {categories.length > 0 ? (
+        <div className="space-y-2">
+          <Label htmlFor="category">What kind of work is it?</Label>
+          <Select id="category" name="category" defaultValue="">
+            <option value="">Choose a category</option>
+            {categories.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+          <p className="text-sm text-muted-foreground">
+            This is how job seekers filter the list. A role with no category
+            still gets posted, but it will not show up when somebody narrows
+            their search.
+          </p>
+        </div>
+      ) : null}
 
       {locations.length > 0 ? (
         <div className="space-y-2">

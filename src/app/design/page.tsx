@@ -153,6 +153,7 @@ export default function DesignPage() {
               id: "sample",
               role: "voucher",
               full_name: "Priya Raman",
+              avatar_url: null,
               email: "priya@example.com",
             }}
           />
