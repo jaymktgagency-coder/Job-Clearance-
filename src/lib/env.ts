@@ -106,6 +106,13 @@ export const ENV_VARS: EnvVar[] = [
     neededFor: "Step 3 - login links that point back to the right place",
     requiredNow: false,
   },
+  {
+    name: "CRON_SECRET",
+    description:
+      "A long random password that proves the nightly job was started by Vercel and not by a stranger who guessed the address. Without it the nightly sweeps refuse to run at all, so payouts never become due and unanswered reports never become disputes. Vercel sends this automatically once it is set - nothing else to configure.",
+    neededFor: "Step 9d - the nightly release job",
+    requiredNow: false,
+  },
 ];
 
 /** Reads a variable straight from the environment. Empty string = not set. */

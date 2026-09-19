@@ -115,6 +115,7 @@ src/
     (auth)/login,signup   onboarding/   dashboard/   invite/[token]/  verify/
     profile/              jobs/[id]/    requests/     inbox/[id]/
     employer/jobs/[id]/   employer/billing/           api/stripe/webhook/
+    api/cron/nightly/     -- the ONLY thing that runs without a person; see vercel.json
     employer/company/     voucher/profile/  -- each role's own profile page
     voucher/seekers/      -- people who named your employer, and reaching out
     employer/locations/   -- the places a company hires into, and their ZIPs
@@ -131,10 +132,12 @@ src/
     ai/{client,resume-file,parse-resume,score-fit,run}.ts
     stripe/{client,payment-methods}.ts
   proxy.ts               -- Next 16 renamed middleware.ts; exports proxy()
-supabase/migrations/     0001-0012
-supabase/tests/          00 stubs + 10..90, 113 checks
+vercel.json              -- the cron entry. 09:00 UTC daily, the only schedule
+supabase/migrations/     0001-0016
+supabase/tests/          00 stubs + 10..97, 136 checks
 scripts/                 seed.mts, ai-backfill.mts
-tests/                   7 browser tests (.mjs) + ai-layer.mts + stripe-9a.mts
+tests/                   7 browser tests (.mjs) + ai-layer.mts + stripe-9a/9b/9c.mts
+                         + geo.mts + cron-9d.mts
 ```
 
 24 tables, 1 view (`voucher_reputation`, security_invoker), 18 enums,
@@ -368,6 +371,28 @@ The webhook verifies the signature over the **raw body**, is safe to run twice,
 returns 200 for unhandled events, and **refuses everything with 503 if
 `STRIPE_WEBHOOK_SECRET` is missing** rather than trusting an unverified call.
 
+**The nightly job is the only thing in Vouch that happens without a person.**
+`vercel.json` calls `/api/cron/nightly` at 09:00 UTC (quiet hours in the US,
+and `release_at <= current_date` compares against the database's date, not the
+caller's). It runs four sweeps, in this order and deliberately so: the two
+dispute sweeps first, then `release_due_payouts()`, then
+`expire_stale_outreach()`. Opening a dispute is one of the things that HOLDS a
+payout, so a report that went unanswered today must already be a dispute by
+the time the payout sweep looks at it — the other way round, that payout
+releases tonight and the dispute opens a second later against approved money.
+Each sweep is independent: one failing does not stop the rest, and the route
+returns 500 so a broken night shows in the Vercel log rather than a green tick
+over a job that did nothing.
+
+**The nightly job releases; it does not pay.** Releasing says "this is owed
+and approved"; paying says "the money has gone". The second is not automated,
+and `payouts` has no UPDATE policy for any login, so this is enforced by the
+database rather than by that file's good manners. `CRON_SECRET` must be set
+or the route refuses everything with 503 — same posture as the Stripe webhook.
+It is a public URL that decides who is owed money and whose unanswered report
+has escalated, so an unauthenticated caller gets **404, not 401**: they learn
+nothing about whether the address exists.
+
 **This container:** the headless browser cannot reach external sites — only
 `curl` goes through the proxy. Google Fonts is blocked locally, so pages render
 in a serif fallback; that is cosmetic and fine on Vercel. Postgres in the
@@ -403,7 +428,13 @@ npm run seed          # demo data; password for every demo login: vouch-demo-123
 npm run test:ai       # 26 checks, real Anthropic calls, a few cents
 npm run test:stripe   # 15 checks, real Stripe test-mode calls, needs the site on :3000
 npm run ai:backfill -- --dry-run
+npm run test:cron     # 5 checks, the lock on the nightly job, needs the site on :3000
 ```
+
+`test:cron` runs against whatever the site was STARTED with: give the server
+no `CRON_SECRET` and it proves the 503 refusal; give server and test the same
+secret and it proves no-secret, wrong-secret and prefix-of-secret are all
+refused while the real one gets through.
 
 SQL suite (136 checks) — run against a throwaway database, **as the `postgres`
 role**:
@@ -443,8 +474,13 @@ check is the only thing between Stripe's word and a stranger's.
 ## Current state
 
 Steps 1–8 built and live. Step 9 (payments): **9e** departure flow, **9a**
-employer payment methods, **9b** charge on a confirmed hire and **9c** the
-voucher's Connect payout account are all built and merged.
+employer payment methods, **9b** charge on a confirmed hire, **9c** the
+voucher's Connect payout account and **9d** the nightly release job are all
+built.
+
+**9d needs `CRON_SECRET` set in Vercel before it does anything.** Without it
+the route refuses every call with 503, which is the right refusal but means
+no payout ever becomes due. It is not a key the live site can go without.
 
 **All migrations through 0016 are applied to the live database**, each
 verified afterwards by attacking as a real logged-in user. The older warning
@@ -452,13 +488,11 @@ here that 0009 and 0010 were unapplied was stale and has been removed.
 
 Still open, in rough priority order:
 
-- **9d — the release job. This is the next step.** `release_due_payouts()`
-  exists and is covered by the SQL suite, and **nothing calls it**: no
-  schedule runs anywhere in this product, so `release_at` passes on a payout
-  and no code notices. A voucher who earned their half 60 days ago is owed it
-  and will not be paid. Needs a Vercel Cron entry, a route for it to call, and
-  a shared secret on that route — it is a URL that moves money, and it must
-  not be one a stranger can hit.
+- **A released payout cannot actually be PAID by anything.** 9d releases; it
+  deliberately does not pay. Nothing in the product turns `released` into
+  `paid` and sends the Stripe transfer — there is no screen and no command.
+  Until there is, the nightly job's output is a correct list of people owed
+  money and no way to give it to them. **This is the next step.**
 - **Nobody's locations have ZIPs yet.** The Radius filter stays hidden until an
   employer fills them in at `/employer/locations`, and stays useless to a
   seeker until they add their own ZIP on `/profile`.
