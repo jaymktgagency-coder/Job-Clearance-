@@ -228,6 +228,12 @@ export default async function JobsPage(props: PageProps<"/jobs">) {
     .sort((a, b) => a.localeCompare(b))
     .map((city) => ({ value: city, label: city }));
 
+  // Whose page this is. An employer and a voucher can reach /jobs perfectly
+  // legitimately — it is the public board — but every line written in the
+  // second person here was written for a seeker, and reads as a bug to
+  // anyone else. One flag, so the seeker-only copy cannot drift apart.
+  const isSeeker = profile.role === "seeker";
+
   // A seeker arriving straight from signing in gets the greeting here, since
   // this is now where they land instead of the dashboard.
   const greet = params.hello === "1";
@@ -243,8 +249,12 @@ export default async function JobsPage(props: PageProps<"/jobs">) {
       <main className="mx-auto w-full max-w-4xl px-6 py-10 sm:py-14">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-3xl font-semibold sm:text-4xl">Open roles</h1>
-          {profile.role === "seeker" ? (
-            <Button variant="outline" render={<Link href="/requests" />}>
+          {isSeeker ? (
+            <Button
+              variant="outline"
+              className="hidden sm:inline-flex"
+              render={<Link href="/requests" />}
+            >
               My requests ({openCount}/5)
             </Button>
           ) : null}
@@ -254,11 +264,16 @@ export default async function JobsPage(props: PageProps<"/jobs">) {
             <>
               {jobs.length} of {allJobs?.length ?? 0} roles match your filters.
             </>
-          ) : (
+          ) : isSeeker ? (
             <>
               {jobs.length} roles hiring through Vouch. Ask for an intro and a
               verified employee there decides whether to vouch for you.
             </>
+          ) : (
+            // An employer or a voucher can open this page too, and telling
+            // them to "ask for an intro" is addressing the wrong person. They
+            // get the count and nothing else.
+            <>{jobs.length} roles hiring through Vouch.</>
           )}
         </p>
 
@@ -271,6 +286,7 @@ export default async function JobsPage(props: PageProps<"/jobs">) {
             locations={locationOptions}
             radiusOptions={radiusOptions}
             hasPostalCode={Boolean(myPostalCode)}
+            isSeeker={isSeeker}
             resultCount={jobs.length}
           />
         ) : null}
