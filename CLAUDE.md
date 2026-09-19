@@ -116,6 +116,7 @@ src/
     profile/              jobs/[id]/    requests/     inbox/[id]/
     employer/jobs/[id]/   employer/billing/           api/stripe/webhook/
     api/cron/nightly/     -- the ONLY thing that runs without a person; see vercel.json
+    admin/payouts/        -- Vouch's own queue: the only place money is SENT
     employer/company/     voucher/profile/  -- each role's own profile page
     voucher/seekers/      -- people who named your employer, and reaching out
     employer/locations/   -- the places a company hires into, and their ZIPs
@@ -127,17 +128,17 @@ src/
   assets/      hello-apple.json -- the greeting animation, as downloaded
   lib/
     env.ts legal.ts auth.ts invites.ts email.ts email-domains.ts verification-codes.ts
-    avatars.ts job-filters.ts outreach.ts geo.ts
+    avatars.ts job-filters.ts outreach.ts geo.ts admin.ts
     supabase/{client,server,health,db-status}.ts
     ai/{client,resume-file,parse-resume,score-fit,run}.ts
     stripe/{client,payment-methods}.ts
   proxy.ts               -- Next 16 renamed middleware.ts; exports proxy()
 vercel.json              -- the cron entry. 09:00 UTC daily, the only schedule
 supabase/migrations/     0001-0016
-supabase/tests/          00 stubs + 10..97, 136 checks
+supabase/tests/          00 stubs + 10..98, 140 checks
 scripts/                 seed.mts, ai-backfill.mts
 tests/                   7 browser tests (.mjs) + ai-layer.mts + stripe-9a/9b/9c.mts
-                         + geo.mts + cron-9d.mts
+                         + geo.mts + cron-9d.mts + admin-9f.mts
 ```
 
 24 tables, 1 view (`voucher_reputation`, security_invoker), 18 enums,
@@ -384,6 +385,26 @@ Each sweep is independent: one failing does not stop the rest, and the route
 returns 500 so a broken night shows in the Vercel log rather than a green tick
 over a job that did nothing.
 
+**An admin is an environment variable, not a row, and it keys on the AUTH
+USER ID — never an email.** `ADMIN_USER_IDS` decides who may open
+`/admin/payouts` and press the button that sends a voucher money.
+`public.users.email` cannot carry that privilege: `users_update_self` is an
+UPDATE policy with no column restriction, so a logged-in person may rewrite
+their own row. **Proven from an ordinary seeker's login against a real
+schema** — they set `email` to the founder's address and `role` to
+`employer`, and both landed. An allowlist on that column would be a promotion
+anybody could grant themselves in one UPDATE, and "admin" could never have
+been a fourth value of `users.role` for the same reason. The login's own email
+(`auth.users`) survived that attack, but Supabase email confirmation is
+currently OFF on this project, so an address is not proof of anything either
+until it is back on. The auth user id is the JWT subject and nothing a login
+writes reaches it. `98_admin_identity.sql` pins all four of those facts — if
+it ever FAILS, somebody has added a guard and the gate could be reconsidered;
+do not just delete the checks. Unset `ADMIN_USER_IDS` means nobody is an
+admin, never everybody. Signed in with it unset, `/admin/payouts` shows the
+founder their own id to paste into Vercel; that screen grants nothing, which
+is why it is safe to show.
+
 **The nightly job releases; it does not pay.** Releasing says "this is owed
 and approved"; paying says "the money has gone". The second is not automated,
 and `payouts` has no UPDATE policy for any login, so this is enforced by the
@@ -429,6 +450,7 @@ npm run test:ai       # 26 checks, real Anthropic calls, a few cents
 npm run test:stripe   # 15 checks, real Stripe test-mode calls, needs the site on :3000
 npm run ai:backfill -- --dry-run
 npm run test:cron     # 5 checks, the lock on the nightly job, needs the site on :3000
+npm run test:admin    # 21 checks, who may press the button that sends money
 ```
 
 `test:cron` runs against whatever the site was STARTED with: give the server
@@ -436,7 +458,7 @@ no `CRON_SECRET` and it proves the 503 refusal; give server and test the same
 secret and it proves no-secret, wrong-secret and prefix-of-secret are all
 refused while the real one gets through.
 
-SQL suite (136 checks) — run against a throwaway database, **as the `postgres`
+SQL suite (140 checks) — run against a throwaway database, **as the `postgres`
 role**:
 ```bash
 su postgres -c "dropdb --if-exists test && createdb test"
@@ -478,9 +500,21 @@ employer payment methods, **9b** charge on a confirmed hire, **9c** the
 voucher's Connect payout account and **9d** the nightly release job are all
 built.
 
-**9d needs `CRON_SECRET` set in Vercel before it does anything.** Without it
-the route refuses every call with 503, which is the right refusal but means
-no payout ever becomes due. It is not a key the live site can go without.
+**9f** — the screen that actually sends the money — is built too, so a
+payout can now travel the whole way from a confirmed hire to a voucher's bank
+account without anybody touching the database.
+
+**Two settings gate all of that, and neither is optional on the live site:**
+
+| Setting | Without it |
+|---|---|
+| `CRON_SECRET` | The nightly route refuses every call with 503, so no payout ever becomes due |
+| `ADMIN_USER_IDS` | Nobody can open `/admin/payouts`, so no released payout can be sent |
+
+Both are set in Vercel, and **a new environment variable does not reach a
+build that already happened** — redeploy after adding either. To find your
+own id for `ADMIN_USER_IDS`: sign in, open `/admin/payouts`, and while the
+list is empty the page shows it to you.
 
 **All migrations through 0016 are applied to the live database**, each
 verified afterwards by attacking as a real logged-in user. The older warning
@@ -488,16 +522,18 @@ here that 0009 and 0010 were unapplied was stale and has been removed.
 
 Still open, in rough priority order:
 
-- **A released payout cannot actually be PAID by anything.** 9d releases; it
-  deliberately does not pay. Nothing in the product turns `released` into
-  `paid` and sends the Stripe transfer — there is no screen and no command.
-  Until there is, the nightly job's output is a correct list of people owed
-  money and no way to give it to them. **This is the next step.**
+- **The payout path has never been run end to end on the live site.** Every
+  piece is built and tested in isolation — the nightly sweep against a real
+  database, the transfer against real Stripe, the gate against a real server
+  — but no payout has yet gone confirmed hire → 60 days → released → sent.
+  Until one has, this is built, not proven. **This is the next step**, and it
+  needs both settings above in Vercel first.
+- **`/admin/payouts` is the whole admin surface.** `hire_status` has
+  `disputed` and `abuse_flags` has an entire table, and there is still no
+  human queue for either. The gate in `lib/admin.ts` is reusable for them.
 - **Nobody's locations have ZIPs yet.** The Radius filter stays hidden until an
   employer fills them in at `/employer/locations`, and stays useless to a
   seeker until they add their own ZIP on `/profile`.
-- **No admin screen exists anywhere.** `hire_status` has `disputed`,
-  `abuse_flags` has a whole table, and there is no human queue for either.
 - Fill in `src/lib/legal.ts` — company name, address, support email are all
   `TODO` and `/support` shows a warning until they are. Stripe reads those
   pages by hand when approving a marketplace.
