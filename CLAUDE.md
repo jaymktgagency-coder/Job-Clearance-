@@ -405,12 +405,30 @@ npm run test:stripe   # 15 checks, real Stripe test-mode calls, needs the site o
 npm run ai:backfill -- --dry-run
 ```
 
-SQL suite (88 checks) — run against a throwaway database:
+SQL suite (136 checks) — run against a throwaway database, **as the `postgres`
+role**:
 ```bash
-psql -d test -v ON_ERROR_STOP=1 -f supabase/tests/00_supabase_stubs.sql \
-  $(ls supabase/migrations/*.sql | sed 's/^/-f /') \
-  $(ls supabase/tests/[1-7]0_*.sql | sed 's/^/-f /')
+su postgres -c "dropdb --if-exists test && createdb test"
+ARGS=$(ls supabase/migrations/*.sql supabase/tests/[1-9][0-9]_*.sql \
+  | sed 's/^/-f /' | tr '\n' ' ')
+su postgres -c "cd $PWD && psql -d test -v ON_ERROR_STOP=1 -q \
+  -f supabase/tests/00_supabase_stubs.sql $ARGS"
 ```
+
+Two things this gets right that the obvious version did not:
+
+- **`[1-9][0-9]_`, not `[1-7]0_`.** The old glob predates `80_`, `90_`, `95_`,
+  `96_` and `97_`, so it ran five files fewer — a green run that had never
+  opened the money, payout, category, outreach or radius checks at all.
+- **As `postgres`, not as whoever you happen to be.** The guards trust
+  `service_role` and `postgres` and nobody else, and the fixtures need a
+  trusted caller to seed a verified voucher. Run the suite as a fresh
+  superuser named anything else and `10_database_rules.sql` dies on line 42
+  with "A new voucher profile always starts unverified" — the guard working
+  exactly as designed, looking exactly like a broken suite.
+
+After a container restart the server is down but the data directory survives.
+`pg_ctlcluster 16 main start`, then recreate `test` as above.
 
 Browser tests in `tests/*.mjs` cover auth, invites, onboarding, verification,
 the seeker journey, the voucher inbox and the employer flow. `tests/README.md`
@@ -424,27 +442,26 @@ check is the only thing between Stripe's word and a stranger's.
 
 ## Current state
 
-Steps 1–8 built and live. Step 9 (payments) in progress: **9e** (departure
-flow) and **9a** (employer payment methods) are written and tested but
-**migrations 0009 and 0010 are not yet applied to the live database**, so
-neither can be merged to `main` or exercised end to end.
+Steps 1–8 built and live. Step 9 (payments): **9e** departure flow, **9a**
+employer payment methods, **9b** charge on a confirmed hire and **9c** the
+voucher's Connect payout account are all built and merged.
+
+**All migrations through 0016 are applied to the live database**, each
+verified afterwards by attacking as a real logged-in user. The older warning
+here that 0009 and 0010 were unapplied was stale and has been removed.
 
 Still open, in rough priority order:
 
-- **All migrations through 0016 are applied to the live database** (18 Sep),
-  each verified afterwards by attacking as a real logged-in user.
+- **9d — the release job. This is the next step.** `release_due_payouts()`
+  exists and is covered by the SQL suite, and **nothing calls it**: no
+  schedule runs anywhere in this product, so `release_at` passes on a payout
+  and no code notices. A voucher who earned their half 60 days ago is owed it
+  and will not be paid. Needs a Vercel Cron entry, a route for it to call, and
+  a shared secret on that route — it is a URL that moves money, and it must
+  not be one a stranger can hit.
 - **Nobody's locations have ZIPs yet.** The Radius filter stays hidden until an
   employer fills them in at `/employer/locations`, and stays useless to a
   seeker until they add their own ZIP on `/profile`.
-- ~~Apply 0013 + 0014 + 0015 before merging the code that needs them~~ — the job list
-  reads `jobs.category` and `job_categories`, and the profile pages upload to
-  the `avatars` bucket, and the whole outreach feature is 0015. **All three
-  were applied to the live database on 18 Sep** and verified by attacking as a
-  real logged-in user.
-- Apply 0009 + 0010, verify by attacking as a real user, then merge.
-- 9b charge on confirmed hire · 9c voucher Connect onboarding · 9d the
-  release job (Vercel Cron — **nothing runs on a schedule yet**, so
-  `release_at` passes and no code notices).
 - **No admin screen exists anywhere.** `hire_status` has `disputed`,
   `abuse_flags` has a whole table, and there is no human queue for either.
 - Fill in `src/lib/legal.ts` — company name, address, support email are all

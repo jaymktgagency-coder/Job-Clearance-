@@ -18,8 +18,17 @@
  * filter, and was reported as one.
  *
  * A control with one option is worse than no control: it invites a tap and
- * then does nothing. So when there is nothing to filter by, the reason is
- * said in words instead.
+ * then does nothing. It is hidden, and nothing is put in its place: the note
+ * that used to explain the absence ("None of the open roles has a category
+ * yet") was reported from a phone as looking like a fault. It was — it
+ * narrated our own empty table to somebody who has no way to act on it. An
+ * absent filter needs no explanation.
+ *
+ * WHOSE PAGE THIS IS
+ * An employer and a voucher can open /jobs too. The ZIP prompt is addressed
+ * to a seeker and only a seeker, so it takes `isSeeker` rather than inferring
+ * it from a missing ZIP — an employer has no ZIP here either, and telling
+ * them to go and add one sends them to a page that is not theirs.
  *
  * `router.replace` rather than `push`, deliberately: pushing would put every
  * intermediate filter on the history stack, so a seeker who tried four
@@ -34,6 +43,7 @@ import { useTransition } from "react";
 import {
   FILTER_COOKIE,
   filtersToQuery,
+  radiusMiles,
   type JobFilters as FilterState,
 } from "@/lib/job-filters";
 import { Label } from "@/components/ui/label";
@@ -94,6 +104,7 @@ export function JobFilters({
   locations,
   radiusOptions,
   hasPostalCode,
+  isSeeker,
   resultCount,
 }: {
   filters: FilterState;
@@ -103,6 +114,8 @@ export function JobFilters({
   radiusOptions: number[];
   /** False when the seeker has not given a ZIP, so there is nothing to measure from. */
   hasPostalCode: boolean;
+  /** False for an employer or a voucher, who have no ZIP of their own to add. */
+  isSeeker: boolean;
   resultCount: number;
 }) {
   const router = useRouter();
@@ -118,6 +131,11 @@ export function JobFilters({
   }
 
   const anySet = Boolean(filters.category || filters.location || filters.radius);
+
+  // The distance currently in force, in miles, or null. Parsed through the
+  // same function the server filters with, so the label can never claim a
+  // radius the list is not actually applying.
+  const activeRadius = radiusMiles(filters);
 
   return (
     <div
@@ -156,7 +174,16 @@ export function JobFilters({
               change({ ...filters, location: e.currentTarget.value || undefined })
             }
           >
-            <option value="">Anywhere</option>
+            {/* Not a flat "Anywhere": with a distance filter running, the
+                list is emphatically not anywhere, and a dropdown saying so
+                while five-mile results sit underneath reads as a filter that
+                has not taken. Unset here means "no particular town" — which
+                under a radius means any town inside it. */}
+            <option value="">
+              {activeRadius != null
+                ? `Any town within ${activeRadius} miles`
+                : "Anywhere"}
+            </option>
             {locations.map((l) => (
               <option key={l.value} value={l.value}>
                 {l.label}
@@ -203,17 +230,10 @@ export function JobFilters({
           Without it they are just another flex item, and a sentence that long
           pushes "Clear" onto the end of it — which is how it shipped, and what
           looking at the deployed site caught. */}
-      {!hasPostalCode ? (
+      {isSeeker && !hasPostalCode ? (
         <p className="basis-full text-sm text-muted-foreground">
           <InlineLink href="/profile">Add your ZIP code</InlineLink> to filter
           roles by how far they are from you.
-        </p>
-      ) : null}
-
-      {categories.length === 0 ? (
-        <p className="basis-full text-sm text-muted-foreground">
-          None of the open roles has a category yet, so there is nothing to
-          filter by. Employers choose one when they post.
         </p>
       ) : null}
 
