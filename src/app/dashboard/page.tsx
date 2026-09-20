@@ -16,6 +16,7 @@ import { ArrowRightIcon } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { currentUser, currentProfile } from "@/lib/auth";
+import { adminCheck } from "@/lib/admin";
 import { InviteForm } from "./InviteForm";
 import { AiNotice } from "@/components/ai-notice";
 import { AppHeader } from "@/components/app-header";
@@ -87,6 +88,10 @@ export default async function DashboardPage({
 
   const supabase = await createClient();
 
+  // Whether to offer the platform's own queue. An admin is not a role, so
+  // this is the one place the dashboard asks.
+  const { isAdmin } = await adminCheck();
+
   return (
     <>
       {greet ? <HelloOverlay /> : null}
@@ -102,6 +107,23 @@ export default async function DashboardPage({
         {profile.role === "seeker" ? <SeekerView /> : null}
         {profile.role === "voucher" ? <VoucherView /> : null}
         {profile.role === "employer" ? <EmployerView /> : null}
+
+        {/* Vouch's own work, not this account's — so it sits under whatever
+            their role brought them here for, and only they can see it. */}
+        {isAdmin ? (
+          <section className="mt-12 border-t border-border pt-6">
+            <h2 className="text-sm font-medium text-muted-foreground">
+              Platform
+            </h2>
+            <Button
+              variant="outline"
+              className="mt-3"
+              render={<Link href="/admin/payouts" />}
+            >
+              Payouts waiting to be sent
+            </Button>
+          </section>
+        ) : null}
       </main>
     </>
   );

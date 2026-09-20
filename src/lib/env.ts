@@ -106,6 +106,20 @@ export const ENV_VARS: EnvVar[] = [
     neededFor: "Step 3 - login links that point back to the right place",
     requiredNow: false,
   },
+  {
+    name: "ADMIN_USER_IDS",
+    description:
+      "Who may work the platform's own queues - right now, the screen that pays vouchers what they are owed. Your Supabase auth user ID, not your email: a logged-in person can rewrite their own email in the database, so an email list here would be a promotion anyone could grant themselves. Visit /admin/payouts signed in and it shows you your own ID to paste here. Separate several with commas. Unset means nobody is an admin.",
+    neededFor: "Step 9f - paying the voucher",
+    requiredNow: false,
+  },
+  {
+    name: "CRON_SECRET",
+    description:
+      "A long random password that proves the nightly job was started by Vercel and not by a stranger who guessed the address. Without it the nightly sweeps refuse to run at all, so payouts never become due and unanswered reports never become disputes. Vercel sends this automatically once it is set - nothing else to configure.",
+    neededFor: "Step 9d - the nightly release job",
+    requiredNow: false,
+  },
 ];
 
 /** Reads a variable straight from the environment. Empty string = not set. */
