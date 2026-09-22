@@ -128,17 +128,17 @@ src/
   assets/      hello-apple.json -- the greeting animation, as downloaded
   lib/
     env.ts legal.ts auth.ts invites.ts email.ts email-domains.ts verification-codes.ts
-    avatars.ts job-filters.ts outreach.ts geo.ts admin.ts
+    avatars.ts job-filters.ts outreach.ts geo.ts admin.ts payment-errors.ts
     supabase/{client,server,health,db-status}.ts
     ai/{client,resume-file,parse-resume,score-fit,run}.ts
-    stripe/{client,payment-methods}.ts
+    stripe/{client,payment-methods,charges,connect,diagnose}.ts
   proxy.ts               -- Next 16 renamed middleware.ts; exports proxy()
 vercel.json              -- the cron entry. 09:00 UTC daily, the only schedule
 supabase/migrations/     0001-0016
 supabase/tests/          00 stubs + 10..98, 140 checks
 scripts/                 seed.mts, ai-backfill.mts
 tests/                   7 browser tests (.mjs) + ai-layer.mts + stripe-9a/9b/9c.mts
-                         + geo.mts + cron-9d.mts + admin-9f.mts
+                         + geo.mts + cron-9d.mts + admin-9f.mts + payment-errors.mts
 ```
 
 24 tables, 1 view (`voucher_reputation`, security_invoker), 18 enums,
@@ -385,6 +385,42 @@ Each sweep is independent: one failing does not stop the rest, and the route
 returns 500 so a broken night shows in the Vercel log rather than a green tick
 over a job that did nothing.
 
+**`last_error` is read by the person the row belongs to, so what goes in it is
+decided by WHOSE FAULT the failure was.** A voucher's earnings page was showing
+"Unregistered API key" in a red box — a sentence about Vouch's Stripe
+configuration, on their page, phrased as though it were about them. But
+genericising all of it would have been the worse bug: most of what lands in
+`last_error` is a card decline, and "that card was declined, add another" is
+the single most useful line on the billing page. So `stripeFailure()` in
+`lib/stripe/client.ts` splits by the error's **class**, never by reading its
+text: `StripeCardError` and `StripeConnectionError` are the reader's business
+and keep Stripe's own words; authentication, permission, a malformed request
+and a 5xx are ours, and only a generic line is stored. The raw text goes to
+`console.error` and to the admin who pressed the button. `customerSafeError()`
+in `lib/payment-errors.ts` is the second line of defence, and exists for one
+reason: **rows written before this fix still hold the raw text**, and no
+migration can sensibly rewrite free text. It has no imports on purpose —
+`ChargeList.tsx` is a client component, and importing the Stripe client there
+would drag the SDK into the browser bundle. `npm run test:errors` pins both
+directions; a false positive there is its own bug, so every real
+customer-facing message is asserted to survive untouched.
+
+**A valid Stripe key can still be the wrong Stripe key.** A voucher's
+`acct_...` is created under one Stripe platform account. Point the app at
+another — a new one, live keys instead of test — and every stored `acct_...`
+is an id that platform has never heard of; transfers then fail with wording
+about keys and registration, which reads like a broken key when the key is
+fine and the *pairing* is broken. **Nothing in the database records which
+Stripe account an `acct_...` came from**, so `lib/stripe/diagnose.ts` asks
+Stripe instead, on the admin screen. It asks v1 **and** v2 because which one
+fails is the diagnosis: v1 ok + v2 refused = the account is ours but the v2
+Accounts API is not enabled (and transfers follow v2, so paying still fails);
+both "no such" = a different Stripe account; both "permission" = Connect not
+enabled. Every call is inside a try/catch **and** on a 5-second fuse with
+`maxNetworkRetries: 0` via `stripeBriefly()` — the SDK's default is 80 seconds
+plus retries, which is right for taking money and would hang an admin page
+that renders this on load.
+
 **An admin is an environment variable, not a row, and it keys on the AUTH
 USER ID — never an email.** `ADMIN_USER_IDS` decides who may open
 `/admin/payouts` and press the button that sends a voucher money.
@@ -451,6 +487,7 @@ npm run test:stripe   # 15 checks, real Stripe test-mode calls, needs the site o
 npm run ai:backfill -- --dry-run
 npm run test:cron     # 5 checks, the lock on the nightly job, needs the site on :3000
 npm run test:admin    # 21 checks, who may press the button that sends money
+npm run test:errors   # 29 checks, our plumbing never reaches a customer's screen
 ```
 
 `test:cron` runs against whatever the site was STARTED with: give the server
@@ -522,6 +559,15 @@ here that 0009 and 0010 were unapplied was stale and has been removed.
 
 Still open, in rough priority order:
 
+- **An "Unregistered API key" from Stripe is still unexplained.** The key is
+  almost certainly fine: an invalid key returns 401, which
+  `stripeErrorMessage` turns into "Vouch's payment settings are wrong on our
+  side" — so seeing Stripe's own words instead proves it was a 400/403/404,
+  a permission or registration refusal rather than a rejected key. The
+  Stripe panel on `/admin/payouts` was built to name which; **nobody has read
+  it on the live site yet.** Prime suspect is a platform mismatch: the stored
+  `acct_...` ids were created under the Stripe account used to build 9c, and
+  the key now in Vercel may belong to a different one.
 - **The payout path has never been run end to end on the live site.** Every
   piece is built and tested in isolation — the nightly sweep against a real
   database, the transfer against real Stripe, the gate against a real server

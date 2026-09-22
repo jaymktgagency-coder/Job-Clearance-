@@ -13,6 +13,7 @@
 import { useActionState } from "react";
 import { retryCharge, type BillingState } from "./actions";
 import { FormError } from "@/components/form-message";
+import { customerSafeError } from "@/lib/payment-errors";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -92,9 +93,13 @@ function Row({ charge }: { charge: ChargeRow }) {
 
       <p className="measure mt-2 text-muted-foreground">{meta.line}</p>
 
-      {/* Stripe's own wording. Better than anything we would invent. */}
-      {owed && charge.last_error ? (
-        <FormError className="mt-3">{charge.last_error}</FormError>
+      {/* Stripe's own wording for a decline — better than anything we would
+          invent, and the employer can act on it. But NOT when the failure was
+          our own configuration: that is not theirs to read or to fix. */}
+      {owed && customerSafeError(charge.last_error) ? (
+        <FormError className="mt-3">
+          {customerSafeError(charge.last_error)}
+        </FormError>
       ) : null}
 
       {state.notice ? (

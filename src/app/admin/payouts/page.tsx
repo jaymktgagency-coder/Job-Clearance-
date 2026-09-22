@@ -29,6 +29,7 @@ import { currentProfile } from "@/lib/auth";
 import { adminCheck } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/server";
 import { stripeIsConfigured, stripeIsTestMode } from "@/lib/stripe/client";
+import { diagnoseStripe } from "@/lib/stripe/diagnose";
 import { PayButton } from "./PayButton";
 import { AppHeader } from "@/components/app-header";
 import { FormError, FormNotice } from "@/components/form-message";
@@ -63,7 +64,11 @@ type Row = {
   attempt_count: number;
   stripe_transfer_id: string | null;
   voucher: { full_name: string | null; email: string } | null;
-  account: { payouts_enabled: boolean; payout_account_status: string | null } | null;
+  account: {
+    payouts_enabled: boolean;
+    payout_account_status: string | null;
+    payout_account_id: string | null;
+  } | null;
   jobTitle: string;
 };
 
@@ -87,9 +92,11 @@ function flatten(raw: Record<string, unknown>): Row {
     attempt_count: (raw.attempt_count as number) ?? 0,
     stripe_transfer_id: (raw.stripe_transfer_id as string) ?? null,
     voucher: one<{ full_name: string | null; email: string }>(raw.users),
-    account: one<{ payouts_enabled: boolean; payout_account_status: string | null }>(
-      raw.voucher_profiles,
-    ),
+    account: one<{
+      payouts_enabled: boolean;
+      payout_account_status: string | null;
+      payout_account_id: string | null;
+    }>(raw.voucher_profiles),
     jobTitle: job?.title ?? "a hire",
   };
 }
@@ -160,7 +167,7 @@ export default async function AdminPayoutsPage() {
       id, amount_cents, status, release_at, released_at, paid_at, hold_reason,
       last_error, attempt_count, stripe_transfer_id,
       users:voucher_id(full_name, email),
-      voucher_profiles:voucher_id(payouts_enabled, payout_account_status),
+      voucher_profiles:voucher_id(payouts_enabled, payout_account_status, payout_account_id),
       hires(jobs(title))
     `)
     .in("status", ["released", "held", "paid"])
@@ -176,6 +183,18 @@ export default async function AdminPayoutsPage() {
     .slice(0, 10);
 
   const owedTotal = owed.reduce((n, r) => n + r.amount_cents, 0);
+
+  // Ask Stripe who we are and whether it recognises the accounts we are about
+  // to pay. Only for the ones actually waiting — there is no point checking an
+  // account whose money already arrived.
+  const diagnosis = await diagnoseStripe(
+    owed
+      .map((r): [string, string] => [
+        r.account?.payout_account_id ?? "",
+        r.voucher?.full_name ?? r.voucher?.email ?? "a voucher",
+      ])
+      .filter(([id]) => id.length > 0),
+  );
 
   return (
     <>
@@ -211,6 +230,95 @@ export default async function AdminPayoutsPage() {
           </FormError>
         ) : null}
 
+        {/* --- Which Stripe account are we actually talking to? -------------
+            A valid key can still be the WRONG key. A voucher's payout account
+            lives under one Stripe platform account; point the app at another
+            and every stored acct_ becomes an id Stripe has never heard of.
+            Nothing in the database records which account an acct_ came from,
+            so this panel asks Stripe instead of guessing. Admin-only, which
+            is why raw Stripe wording is allowed here and nowhere else. */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="text-lg">Stripe</CardTitle>
+            <CardDescription>
+              Which Stripe account this deployment is using, and whether it
+              recognises the accounts it is about to pay.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* The headline, so the answer is readable without reading rows. */}
+            {!diagnosis.key.ok ? (
+              <FormError>
+                This deployment&apos;s Stripe key could not be used at all.
+                Nothing can be paid until that is fixed.
+              </FormError>
+            ) : diagnosis.anyMismatch ? (
+              <FormError>
+                Stripe does not recognise at least one of the payout accounts
+                below. That is almost always the key and the accounts belonging
+                to two different Stripe accounts — see the verdict on each one.
+              </FormError>
+            ) : diagnosis.accounts.length > 0 ? (
+              <FormNotice>
+                Every payout account below belongs to this Stripe account.
+              </FormNotice>
+            ) : null}
+
+            <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[10rem_1fr]">
+              <dt className="text-muted-foreground">Key</dt>
+              <dd className="font-medium">
+                {diagnosis.keyMode === "none"
+                  ? "Not set"
+                  : diagnosis.keyMode === "test"
+                    ? "Test mode (sk_test_…) — no real money moves"
+                    : "LIVE mode (sk_live_…) — real money moves"}
+              </dd>
+
+              <dt className="text-muted-foreground">Stripe account</dt>
+              <dd className="tabular font-mono text-xs break-all sm:text-sm">
+                {diagnosis.platformAccountId ?? "could not be read"}
+              </dd>
+
+              <dt className="text-muted-foreground">Key works</dt>
+              <dd className={diagnosis.key.ok ? "font-medium" : "font-medium text-destructive"}>
+                {diagnosis.key.ok ? "Yes" : "No"} — {diagnosis.key.detail}
+              </dd>
+            </dl>
+
+            {diagnosis.accounts.length > 0 ? (
+              <div className="space-y-3 border-t border-border pt-4">
+                <p className="text-sm font-medium">
+                  The payout accounts waiting to be paid
+                </p>
+                {diagnosis.accounts.map((a) => (
+                  <div key={a.accountId} className="text-sm">
+                    <p className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{a.who}</span>
+                      <span className="tabular font-mono text-xs break-all text-muted-foreground">
+                        {a.accountId}
+                      </span>
+                      <Badge variant={a.v1.ok && a.v2.ok ? "success" : "outline"}>
+                        {a.v1.ok && a.v2.ok ? "Recognised" : "Problem"}
+                      </Badge>
+                    </p>
+                    {a.v1.ok && a.v2.ok ? null : (
+                      <>
+                        <p className="measure mt-1 text-destructive">{a.verdict}</p>
+                        {/* The raw Stripe wording. On this screen only. */}
+                        <p className="measure mt-1 text-xs text-muted-foreground">
+                          v1: {a.v1.detail}
+                          <br />
+                          v2: {a.v2.detail}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+
         {/* --- Owed ---------------------------------------------------------- */}
         <section className="mt-10">
           <h2 className="text-xl font-semibold">Ready to pay</h2>
@@ -243,7 +351,10 @@ export default async function AdminPayoutsPage() {
                     />
                   )}
 
-                  {/* A previous press that Stripe refused. */}
+                  {/* A previous press that Stripe refused. What is STORED
+                      here is the line the voucher sees, so it is deliberately
+                      vague when the fault was ours; the Stripe panel above and
+                      the Vercel log carry the specifics. */}
                   {r.last_error ? (
                     <p className="text-sm text-muted-foreground">
                       Last attempt ({r.attempt_count}

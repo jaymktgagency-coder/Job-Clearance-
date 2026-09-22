@@ -15,7 +15,8 @@
     "test:9c": "node --experimental-strip-types --import ./tests/resolve-ts.mjs --env-file=.env.local tests/stripe-9c.mts",
     "test:geo": "node --experimental-strip-types --import ./tests/resolve-ts.mjs tests/geo.mts",
     "test:cron": "node --experimental-strip-types --import ./tests/resolve-ts.mjs tests/cron-9d.mts",
-    "test:admin": "node --experimental-strip-types --import ./tests/resolve-ts.mjs tests/admin-9f.mts"
+    "test:admin": "node --experimental-strip-types --import ./tests/resolve-ts.mjs tests/admin-9f.mts",
+    "test:errors": "node --experimental-strip-types --import ./tests/resolve-ts.mjs tests/payment-errors.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
