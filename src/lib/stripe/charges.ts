@@ -23,7 +23,7 @@
 
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/server";
-import { stripe, stripeErrorMessage, stripeIsConfigured } from "./client";
+import { stripe, stripeErrorMessage, stripeFailure, stripeIsConfigured } from "./client";
 
 /** Everything is USD. There is no currency column, and one currency is a decision, not an oversight. */
 const CURRENCY = "usd";
@@ -169,7 +169,15 @@ export async function collectFeeForHire(hireId: string): Promise<ChargeOutcome> 
     };
   } catch (err) {
     // An off-session card decline arrives as a thrown error, not a status.
-    const detail = stripeErrorMessage(err);
+    //
+    // A decline is the employer's business and keeps Stripe's own wording —
+    // "that card was declined" is the most useful sentence on the billing
+    // page. Anything else (a bad key, a permission, a 5xx) is ours, and the
+    // employer gets a plain line instead of a fault in our configuration.
+    const failure = stripeFailure(err);
+    if (failure.ours) {
+      console.error(`[stripe] charge ${charge.id} failed: ${failure.detail}`);
+    }
     const intentId =
       err instanceof Stripe.errors.StripeError
         ? (err.raw as { payment_intent?: { id?: string } } | undefined)?.payment_intent?.id ?? null
@@ -180,13 +188,13 @@ export async function collectFeeForHire(hireId: string): Promise<ChargeOutcome> 
       .update({
         status: "pending",
         stripe_payment_intent_id: intentId,
-        last_error: detail,
+        last_error: failure.publicMessage,
         attempted_at: new Date().toISOString(),
         attempt_count: (charge.attempt_count as number) + 1,
       })
       .eq("id", charge.id);
 
-    return { ok: false, status: "pending", detail };
+    return { ok: false, status: "pending", detail: failure.detail };
   }
 }
 

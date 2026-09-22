@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/server";
 import { currentProfile } from "@/lib/auth";
 import { stripeIsConfigured, stripeIsTestMode } from "@/lib/stripe/client";
 import { payoutAccountState } from "@/lib/stripe/connect";
+import { customerSafeError } from "@/lib/payment-errors";
 import { refreshPayoutAccount, startPayoutOnboarding } from "./actions";
 import { AppHeader } from "@/components/app-header";
 import { FormError } from "@/components/form-message";
@@ -241,8 +242,12 @@ export default async function VoucherPayoutsPage(props: PageProps<"/voucher/payo
                       {p.hold_reason}
                     </p>
                   ) : null}
-                  {p.last_error ? (
-                    <FormError className="mt-3">{p.last_error}</FormError>
+                  {/* Never the raw text: this row is theirs to read, and
+                      what Stripe last said may be about OUR settings. */}
+                  {customerSafeError(p.last_error as string | null) ? (
+                    <FormError className="mt-3">
+                      {customerSafeError(p.last_error as string | null)}
+                    </FormError>
                   ) : null}
                 </div>
               );

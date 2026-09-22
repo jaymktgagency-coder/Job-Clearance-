@@ -26,7 +26,7 @@
 
 import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/server";
-import { stripe, stripeErrorMessage, stripeIsConfigured } from "./client";
+import { stripe, stripeFailure, stripeIsConfigured } from "./client";
 
 /** Where a voucher has got to, in words a screen can use. */
 export type PayoutAccountState = {
@@ -347,15 +347,22 @@ export async function payPayout(payoutId: string): Promise<PayoutResult> {
       detail: `Sent $${((payout.amount_cents as number) / 100).toLocaleString()} to the voucher.`,
     };
   } catch (err) {
-    const detail = stripeErrorMessage(err);
+    // The voucher can read their own payout row, so only the safe half is
+    // stored. The raw text goes to the server log — where an admin can find
+    // it — and is returned to whoever pressed the button, who is an admin by
+    // the time this runs.
+    const failure = stripeFailure(err);
+    if (failure.ours) {
+      console.error(`[stripe] payout ${payoutId} failed: ${failure.detail}`);
+    }
     await admin
       .from("payouts")
       .update({
-        last_error: detail,
+        last_error: failure.publicMessage,
         attempted_at: new Date().toISOString(),
         attempt_count: (payout.attempt_count as number) + 1,
       })
       .eq("id", payoutId);
-    return { ok: false, status: "released", detail };
+    return { ok: false, status: "released", detail: failure.detail };
   }
 }
